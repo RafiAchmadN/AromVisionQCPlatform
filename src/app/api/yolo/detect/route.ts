@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-const YOLO_SERVICE = process.env.YOLO_SERVICE_URL ?? 'http://localhost:8000';
+const YOLO_SERVICE = process.env.YOLO_SERVICE_URL ?? 'https://aromvisionqcplatform-production.up.railway.app';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
