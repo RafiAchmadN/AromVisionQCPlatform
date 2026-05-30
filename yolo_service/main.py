@@ -1,8 +1,8 @@
 """
-AromAI YOLO Inference Service
+AromVision YOLO Inference Service
 FastAPI + Ultralytics YOLOv11
 
-Dataset: Fresh and Rotten Fruit Detection (Adithya - Roboflow)
+Dataset: Fresh and Rotten Fruit Detection
 Port  : 8000
 Run   : uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 """
@@ -20,7 +20,7 @@ from ultralytics import YOLO
 
 from class_map import resolve_class
 
-app = FastAPI(title="AromAI YOLO Service", version="1.0.0")
+app = FastAPI(title="AromVision YOLO Service", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,8 +47,8 @@ async def load_model():
 # ---------- Schema ----------
 
 class DetectRequest(BaseModel):
-    image_b64: str      # JPEG frame dari webcam, base64-encoded
-    conf: float = 0.02  # threshold rendah karena dataset training kecil (26 gambar)
+    image_b64: str
+    conf: float = 0.45          # threshold realistis untuk model terlatih
 
 
 class BBox(BaseModel):
@@ -58,35 +58,66 @@ class BBox(BaseModel):
     h: float
 
 
+class ColorRGB(BaseModel):
+    r: int
+    g: int
+    b: int
+
+
 class Detection(BaseModel):
-    object_class: str
+    object_class:     str
     confidence_score: float
-    rot_level: float        # 0–100 persen
-    color_category: str     # "Normal" | "Pucat" | "Terlalu Matang"
-    defect_count: int
-    defect_severity: str    # "Minor" | "Moderate" | "Severe"
-    anomaly_score: float    # 0–1
-    bbox: BBox
+    rot_level:        float      # 0–100 persen
+    color_rgb:        ColorRGB
+    color_deviation:  float      # 0–50
+    color_category:   str        # "Normal" | "Pucat" | "Terlalu Matang" | "Abnormal"
+    defect_types:     list[str]
+    defect_count:     int
+    defect_severity:  str        # "Minor" | "Moderate" | "Severe"
+    anomaly_score:    float      # 0–1
+    bbox:             BBox
 
 
 class DetectResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
-    detections: list[Detection]
+    detections:   list[Detection]
     model_loaded: bool
     inference_ms: float
-    frame_w: int
-    frame_h: int
+    frame_w:      int
+    frame_h:      int
 
 
 # ---------- Helper ----------
 
-def _build_detection(cls_name: str, conf: float, x1: float, y1: float, x2: float, y2: float) -> Detection:
+def _color_rgb(color_category: str) -> ColorRGB:
+    """Approximate RGB from colour category."""
+    if color_category == "Normal":
+        return ColorRGB(r=80,  g=155, b=60)
+    if color_category == "Pucat":
+        return ColorRGB(r=200, g=178, b=95)
+    if color_category == "Terlalu Matang":
+        return ColorRGB(r=145, g=82,  b=50)
+    return ColorRGB(r=120, g=60, b=60)  # Abnormal
+
+
+def _defect_types(defect_severity: str) -> list[str]:
+    if defect_severity == "Minor":
+        return ["minor_bruise"]
+    if defect_severity == "Moderate":
+        return ["brown_spot", "soft_area"]
+    return ["mold", "brown_spot", "decay"]
+
+
+def _build_detection(
+    cls_name: str, conf: float,
+    x1: float, y1: float, x2: float, y2: float,
+) -> Detection:
     mapping = resolve_class(cls_name)
     is_fresh: bool = mapping["is_fresh"]
     obj_class: str = mapping["object_class"]
 
-    # rot_level: segar → 0-15%, busuk → 40-95%
+    # rot_level: segar → 0-15 %, busuk → 45-95 %
     if is_fresh:
         rot_level = max(0.0, (1.0 - conf) * 20.0)
     else:
@@ -97,8 +128,10 @@ def _build_detection(cls_name: str, conf: float, x1: float, y1: float, x2: float
         color_category = "Normal"
     elif rot_level < 40:
         color_category = "Pucat"
-    else:
+    elif rot_level < 75:
         color_category = "Terlalu Matang"
+    else:
+        color_category = "Abnormal"
 
     # defect_count
     if rot_level < 10:
@@ -118,16 +151,20 @@ def _build_detection(cls_name: str, conf: float, x1: float, y1: float, x2: float
     else:
         defect_severity = "Severe"
 
-    anomaly_score = min(1.0, rot_level / 100.0 + (1.0 - conf) * 0.15)
+    color_deviation = round(min(50.0, rot_level * 0.45), 2)
+    anomaly_score   = min(1.0, rot_level / 100.0 + (1.0 - conf) * 0.15)
 
     return Detection(
-        object_class=obj_class,
-        confidence_score=round(conf, 4),
-        rot_level=round(rot_level, 2),
-        color_category=color_category,
-        defect_count=defect_count,
-        defect_severity=defect_severity,
-        anomaly_score=round(anomaly_score, 4),
+        object_class=     obj_class,
+        confidence_score= round(conf, 4),
+        rot_level=        round(rot_level, 2),
+        color_rgb=        _color_rgb(color_category),
+        color_deviation=  color_deviation,
+        color_category=   color_category,
+        defect_types=     _defect_types(defect_severity),
+        defect_count=     defect_count,
+        defect_severity=  defect_severity,
+        anomaly_score=    round(anomaly_score, 4),
         bbox=BBox(x=round(x1, 1), y=round(y1, 1), w=round(x2 - x1, 1), h=round(y2 - y1, 1)),
     )
 
@@ -137,10 +174,10 @@ def _build_detection(cls_name: str, conf: float, x1: float, y1: float, x2: float
 @app.get("/health")
 async def health():
     return {
-        "status": "ok",
+        "status":       "ok",
         "model_loaded": model is not None,
-        "model_path": str(MODEL_PATH),
-        "classes": list(model.names.values()) if model else [],
+        "model_path":   str(MODEL_PATH),
+        "classes":      list(model.names.values()) if model else [],
     }
 
 
@@ -159,7 +196,6 @@ async def detect(req: DetectRequest):
             detail="Model belum dimuat. Jalankan: python train.py terlebih dahulu.",
         )
 
-    # Decode base64 → numpy image
     try:
         raw = base64.b64decode(req.image_b64)
         arr = np.frombuffer(raw, dtype=np.uint8)
@@ -171,7 +207,7 @@ async def detect(req: DetectRequest):
         raise HTTPException(400, "Gambar tidak valid atau kosong.")
 
     h, w = img.shape[:2]
-    t0 = time.perf_counter()
+    t0   = time.perf_counter()
 
     results = model.predict(img, conf=req.conf, verbose=False)
 
@@ -180,16 +216,16 @@ async def detect(req: DetectRequest):
     detections: list[Detection] = []
     for result in results:
         for box in result.boxes:
-            cls_idx = int(box.cls[0])
+            cls_idx  = int(box.cls[0])
             cls_name = model.names[cls_idx]
             conf_val = float(box.conf[0])
             x1, y1, x2, y2 = box.xyxy[0].tolist()
             detections.append(_build_detection(cls_name, conf_val, x1, y1, x2, y2))
 
     return DetectResponse(
-        detections=detections,
+        detections=  detections,
         model_loaded=True,
         inference_ms=round(inference_ms, 1),
-        frame_w=w,
-        frame_h=h,
+        frame_w=     w,
+        frame_h=     h,
     )

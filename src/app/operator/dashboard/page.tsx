@@ -2,8 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth';
 import { Topbar } from '@/components/shared/topbar';
 import { OperatorSidebar } from '@/components/operator/sidebar';
-import { OperatorLotPanel } from '@/components/operator/lot-panel';
-import { OperatorCameraPanel } from '@/components/operator/camera-panel';
+import { OperatorWorkspace } from '@/components/operator/workspace';
 
 export default async function OperatorDashboard() {
   const user = await getServerSession();
@@ -15,14 +14,7 @@ export default async function OperatorDashboard() {
       <Topbar user={user} />
       <div className="flex flex-1 overflow-hidden">
         <OperatorSidebar />
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-1/2 border-r border-brand-100 flex flex-col overflow-hidden">
-            <OperatorCameraPanel />
-          </div>
-          <div className="w-1/2 flex flex-col overflow-hidden">
-            <OperatorLotPanel operatorId={user.id} operatorName={user.name} />
-          </div>
-        </div>
+        <OperatorWorkspace operatorId={user.id} operatorName={user.name} />
       </div>
     </div>
   );

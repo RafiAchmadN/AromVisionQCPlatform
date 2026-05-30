@@ -9,7 +9,23 @@
     box-sizing: border-box;
   }
   body {
-    @apply bg-brand-50 text-gray-900 antialiased;
+    background-color: #d4e8d4;
+    @apply text-gray-900 antialiased;
     font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 500;
+  }
+  h1, h2, h3 { font-weight: 700; }
+  label, th   { font-weight: 600; }
+}
+
+@layer components {
+  .panel-bg {
+    background-color: #e8f2e8;
+  }
+  .bg-dark-forest {
+    background: linear-gradient(180deg, #050e08 0%, #0d1f10 40%, #142d18 100%);
+  }
+  .bg-dark-forest-btn {
+    background: linear-gradient(90deg, #0d2010, #142d18 50%, #1e3a25);
   }
 }

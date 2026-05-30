@@ -39,9 +39,11 @@ const GRADE_BG: Record<string, string> = {
 interface Props {
   operatorId: string;
   operatorName: string;
+  onSessionStart?: (lotId: string, sessionId: string, lotCode: string) => void;
+  onSessionEnd?: () => void;
 }
 
-export function OperatorLotPanel({ operatorId, operatorName }: Props) {
+export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onSessionEnd }: Props) {
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
   const [activeLotId, setActiveLotId] = useState<string | null>(null);
@@ -82,9 +84,15 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
       });
       const data = await res.json();
       if (!res.ok) { setErrors({ _global: data.message }); return; }
-      setActiveLotId(data.lot.id);
-      setActiveLotCode(data.lot.lot_code ?? data.lot.id.slice(0, 8).toUpperCase());
+
+      const lotId = data.lot.id;
+      const sessionId = data.session?.id ?? '';
+      const lotCode = data.lot.lot_code ?? data.lot.id.slice(0, 8).toUpperCase();
+
+      setActiveLotId(lotId);
+      setActiveLotCode(lotCode);
       setSessionActive(true);
+      onSessionStart?.(lotId, sessionId, lotCode);
     } catch {
       setErrors({ _global: 'Gagal memulai sesi. Coba lagi.' });
     } finally {
@@ -104,6 +112,7 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
       if (res.ok) {
         setSessionActive(false);
         setSessionDone(true);
+        onSessionEnd?.();
       } else {
         const d = await res.json();
         setErrors({ _global: d.message ?? 'Gagal mengakhiri inspeksi' });
@@ -122,6 +131,7 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
     setActiveLotCode('');
     setAggregate(null);
     setErrors({});
+    onSessionEnd?.();
     setForm({
       product_type: '',
       batch_name: '',
@@ -144,34 +154,33 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
   }, [activeLotId, sessionActive]);
 
   // ─── COMPLETION STATE ───────────────────────────────────────
-  if (sessionDone && aggregate) {
-    const grade = aggregate.estimated_grade;
+  if (sessionDone) {
+    const grade = aggregate?.estimated_grade ?? 'A';
     return (
       <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+        <div className="flex items-center gap-2 pb-2 border-b border-brand-100">
           <h2 className="text-base font-semibold text-gray-800">Inspeksi Selesai</h2>
           <Badge variant="success">Terkirim ke Manager</Badge>
         </div>
 
-        {/* Grade result card */}
         <div className={`rounded-xl border-2 p-5 flex flex-col items-center gap-2 ${GRADE_BG[grade] ?? 'bg-gray-50 border-gray-200'}`}>
           <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Estimasi Grade</p>
           <p className={`text-6xl font-black ${GRADE_COLORS[grade] ?? 'text-gray-900'}`}>{grade}</p>
           <p className="text-xs text-gray-500 font-mono">{activeLotCode}</p>
         </div>
 
-        {/* Summary stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatBox label="Total Terpindai" value={aggregate.total_objects_scanned} />
-          <StatBox label="Pass" value={aggregate.pass_count} color="text-green-700" />
-          <StatBox label="Fail" value={aggregate.fail_count} color="text-red-700" />
-          <StatBox label="Avg Confidence" value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`} />
-          <StatBox label="Avg Rot Level" value={`${aggregate.avg_rot_level.toFixed(1)}%`} />
-          <StatBox label="Avg Anomaly" value={aggregate.avg_anomaly_score.toFixed(3)} />
-        </div>
+        {aggregate && (
+          <div className="grid grid-cols-2 gap-3">
+            <StatBox label="Total Terpindai" value={aggregate.total_objects_scanned} />
+            <StatBox label="Pass" value={aggregate.pass_count} color="text-green-700" />
+            <StatBox label="Fail" value={aggregate.fail_count} color="text-red-700" />
+            <StatBox label="Avg Confidence" value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`} />
+            <StatBox label="Avg Rot Level" value={`${aggregate.avg_rot_level.toFixed(1)}%`} />
+            <StatBox label="Avg Anomaly" value={aggregate.avg_anomaly_score.toFixed(3)} />
+          </div>
+        )}
 
-        {/* Defect distribution */}
-        {Object.keys(aggregate.defect_distribution ?? {}).length > 0 && (
+        {aggregate && Object.keys(aggregate.defect_distribution ?? {}).length > 0 && (
           <Card>
             <CardHeader><CardTitle className="text-xs">Distribusi Defek</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-1.5 pt-0">
@@ -201,7 +210,7 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
   if (sessionActive) {
     return (
       <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-        <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+        <div className="flex items-center justify-between pb-2 border-b border-brand-100">
           <div>
             <h2 className="text-base font-semibold text-gray-800">Inspeksi Berlangsung</h2>
             <p className="text-xs text-gray-400 font-mono mt-0.5">{activeLotCode}</p>
@@ -209,7 +218,6 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
           <Badge variant="success" className="animate-pulse">● Live</Badge>
         </div>
 
-        {/* Estimated grade — prominent */}
         {aggregate && (
           <div className={`rounded-xl border-2 px-4 py-3 flex items-center justify-between ${GRADE_BG[aggregate.estimated_grade] ?? 'bg-gray-50 border-gray-200'}`}>
             <div>
@@ -225,7 +233,6 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
           </div>
         )}
 
-        {/* Live metrics grid */}
         {aggregate && (
           <div className="grid grid-cols-2 gap-3">
             <StatBox label="Pass" value={aggregate.pass_count} color="text-green-700" />
@@ -236,24 +243,19 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
             <StatBox
               label="Status"
               value={
-                aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20
-                  ? 'Baik'
-                  : aggregate.avg_confidence >= 0.6
-                  ? 'Perlu Perhatian'
-                  : 'Kritis'
+                aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20 ? 'Baik'
+                : aggregate.avg_confidence >= 0.6 ? 'Perlu Perhatian'
+                : 'Kritis'
               }
               color={
-                aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20
-                  ? 'text-green-700'
-                  : aggregate.avg_confidence >= 0.6
-                  ? 'text-amber-700'
-                  : 'text-red-700'
+                aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20 ? 'text-green-700'
+                : aggregate.avg_confidence >= 0.6 ? 'text-amber-700'
+                : 'text-red-700'
               }
             />
           </div>
         )}
 
-        {/* Defect distribution log */}
         {aggregate && Object.keys(aggregate.defect_distribution ?? {}).length > 0 && (
           <Card>
             <CardHeader><CardTitle className="text-xs">Log Defek Terdeteksi</CardTitle></CardHeader>
@@ -280,18 +282,12 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
 
         {errors._global && <p className="text-xs text-red-600">{errors._global}</p>}
 
-        {/* End inspection button */}
-        <div className="mt-auto pt-2 border-t border-gray-100">
+        <div className="mt-auto pt-2 border-t border-brand-100">
           <p className="text-xs text-gray-400 mb-2">
             Klik tombol di bawah setelah semua bahan selesai diinspeksi.
             Lot akan dikirim ke Manager untuk review.
           </p>
-          <Button
-            onClick={endInspection}
-            loading={endLoading}
-            className="w-full"
-            variant="default"
-          >
+          <Button onClick={endInspection} loading={endLoading} className="w-full" variant="default">
             Selesai Inspeksi → Kirim ke Manager
           </Button>
         </div>
@@ -302,7 +298,7 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
   // ─── FORM STATE (default) ───────────────────────────────────
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-      <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+      <div className="flex items-center gap-2 pb-2 border-b border-brand-100">
         <h2 className="text-base font-semibold text-gray-800">Inisialisasi Lot</h2>
       </div>
       <Card>
@@ -351,12 +347,7 @@ export function OperatorLotPanel({ operatorId, operatorName }: Props) {
               onChange={(e) => setField('shift', e.target.value)}
               required
             />
-            <Input
-              label="Nama Operator"
-              value={operatorName}
-              readOnly
-              className="bg-gray-50 cursor-not-allowed"
-            />
+            <Input label="Nama Operator" value={operatorName} readOnly className="bg-gray-50 cursor-not-allowed" />
             {errors._global && <p className="text-xs text-red-600">{errors._global}</p>}
             <Button type="submit" loading={loading} className="w-full mt-1">
               Mulai Sesi Inspeksi

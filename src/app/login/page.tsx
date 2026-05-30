@@ -60,7 +60,7 @@ export default function LoginPage() {
 
           <div className="w-full flex flex-col gap-3">
             {[
-              { label: 'Real-time YOLO v11 detection', sub: 'Rot level · Defect count · Anomaly score' },
+              { label: 'Realtime detection', sub: 'Rot level · Defect count · Anomaly score' },
               { label: 'Auto-decision engine', sub: 'Grade A/B/C/Reject dengan threshold per produk' },
               { label: 'Full audit trail', sub: 'Setiap keputusan tercatat, immutable' },
             ].map(({ label, sub }) => (

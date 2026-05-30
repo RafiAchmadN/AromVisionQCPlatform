@@ -21,10 +21,10 @@ ROBOFLOW_WORKSPACE = "adithya"
 ROBOFLOW_PROJECT = "fresh-and-rotten-fruits"
 ROBOFLOW_VERSION = 1            # Cek versi terbaru di halaman Roboflow
 
-EPOCHS = 50                     # 50 epoch cukup untuk dataset kecil-sedang
+EPOCHS = 100                    # 100 epoch untuk konvergensi yang lebih baik
 IMG_SIZE = 640                  # Ukuran input YOLO
 BATCH = 16                      # Kurangi jika VRAM kurang (8, 4)
-MODEL_BASE = "yolo11n.pt"       # yolo11n=ringan, yolo11s/m=lebih akurat
+MODEL_BASE = "yolo11s.pt"       # yolo11s = lebih akurat dari nano, tetap ringan
 PROJECT_NAME = "aromai_fruit"
 
 DATASET_DIR = Path("dataset")
@@ -127,9 +127,18 @@ def train(data_yaml: Path):
         imgsz=IMG_SIZE,
         batch=BATCH,
         name=PROJECT_NAME,
-        patience=15,
+        patience=20,        # lebih sabar sebelum early stop
         save=True,
         plots=True,
+        augment=True,       # aktifkan augmentasi bawaan YOLO
+        degrees=10.0,       # rotasi ringan untuk robustness
+        flipud=0.1,
+        fliplr=0.5,
+        mosaic=1.0,
+        mixup=0.1,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
     )
     return results
 
