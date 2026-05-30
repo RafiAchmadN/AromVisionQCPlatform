@@ -7,8 +7,10 @@ Port  : 8000
 Run   : uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 """
 
+import asyncio
 import base64
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cv2
@@ -34,17 +36,23 @@ app.add_middleware(
 
 MODEL_PATH = Path("models/best.pt")
 model: YOLO | None = None
+_executor = ThreadPoolExecutor(max_workers=1)
+
+
+def _load_yolo() -> YOLO | None:
+    if not MODEL_PATH.exists():
+        print(f"[YOLO] WARNING: {MODEL_PATH} tidak ditemukan.")
+        return None
+    m = YOLO(str(MODEL_PATH))
+    print(f"[YOLO] Model loaded: {MODEL_PATH}  classes={list(m.names.values())}")
+    return m
 
 
 @app.on_event("startup")
 async def load_model():
     global model
-    if MODEL_PATH.exists():
-        model = YOLO(str(MODEL_PATH))
-        print(f"[YOLO] Model loaded: {MODEL_PATH}  classes={list(model.names.values())}")
-    else:
-        print(f"[YOLO] WARNING: {MODEL_PATH} tidak ditemukan.")
-        print("[YOLO] Jalankan python train.py untuk melatih model terlebih dahulu.")
+    loop = asyncio.get_event_loop()
+    model = await loop.run_in_executor(_executor, _load_yolo)
 
 
 # ---------- Schema ----------
