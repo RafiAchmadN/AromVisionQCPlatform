@@ -14,7 +14,7 @@ export default async function OperatorDashboard() {
       <Topbar user={user} />
       <div className="flex flex-1 overflow-hidden">
         {/* Panel Kiri — Live Camera & QC Monitor */}
-        <div className="w-1/2 border-r border-gray-200 flex flex-col overflow-hidden">
+        <div className="w-1/2 border-r border-brand-100 flex flex-col overflow-hidden">
           <OperatorCameraPanel />
         </div>
         {/* Panel Kanan — Lot Management */}

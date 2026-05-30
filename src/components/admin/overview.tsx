@@ -1,9 +1,31 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { MetricsSummary, AuditLog } from '@/lib/types';
+
+interface MetricCardProps {
+  label: string;
+  value: string | number;
+  sub?: string;
+  borderColor: string;
+  valueColor: string;
+  subColor?: string;
+}
+
+function MetricCard({ label, value, sub, borderColor, valueColor, subColor }: MetricCardProps) {
+  return (
+    <div
+      className="rounded-[10px] bg-white p-3"
+      style={{ border: '0.5px solid #c2ccc1', borderTop: `3px solid ${borderColor}` }}
+    >
+      <p className="text-[10px] font-semibold tracking-[0.5px] uppercase text-gray-500 mb-1">{label}</p>
+      <p className="text-[26px] font-extrabold leading-none tracking-tight" style={{ color: valueColor }}>{value}</p>
+      {sub && <p className="text-[11px] font-medium mt-1.5" style={{ color: subColor ?? borderColor }}>{sub}</p>}
+    </div>
+  );
+}
 
 export function AdminOverview() {
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
@@ -27,16 +49,16 @@ export function AdminOverview() {
     }
   }
 
-  const summaryCards = metrics
+  const summaryCards: MetricCardProps[] = metrics
     ? [
-        { label: 'Pending Review', value: metrics.pending_lots, color: 'text-orange-600' },
-        { label: 'Approved Hari Ini', value: metrics.total_approved_today, color: 'text-green-600' },
-        { label: 'Rejected Hari Ini', value: metrics.total_rejected_today, color: 'text-red-600' },
-        { label: 'Quarantined Hari Ini', value: metrics.total_quarantined_today, color: 'text-yellow-600' },
-        { label: 'Operator Aktif', value: metrics.active_operators, color: 'text-blue-600' },
-        { label: 'Manager Aktif', value: metrics.active_managers, color: 'text-purple-600' },
-        { label: 'Alert Belum Ditangani', value: metrics.unhandled_alerts, color: 'text-red-700' },
-        { label: 'Avg Confidence', value: `${(metrics.avg_confidence * 100).toFixed(1)}%`, color: 'text-brand-600' },
+        { label: 'Disetujui Hari Ini', value: metrics.total_approved_today, sub: 'lot lulus QC', borderColor: '#2d5c33', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: 'Pending Review', value: metrics.pending_lots, sub: 'perlu aksi', borderColor: '#c98200', valueColor: '#7a4e00' },
+        { label: 'Ditolak Hari Ini', value: metrics.total_rejected_today, sub: 'lot gagal QC', borderColor: '#e24b4a', valueColor: '#7f1d1d' },
+        { label: 'Dikarantina', value: metrics.total_quarantined_today, sub: 'hari ini', borderColor: '#e24b4a', valueColor: '#7f1d1d' },
+        { label: 'Operator Aktif', value: metrics.active_operators, sub: 'terdaftar aktif', borderColor: '#4e9955', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: 'Manager Aktif', value: metrics.active_managers, sub: 'terdaftar aktif', borderColor: '#4e9955', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: 'Alert Belum Ditangani', value: metrics.unhandled_alerts, sub: 'perlu perhatian', borderColor: '#c98200', valueColor: '#7a4e00' },
+        { label: 'Avg AI Confidence', value: `${(metrics.avg_confidence * 100).toFixed(1)}%`, sub: '30 hari terakhir', borderColor: '#2d5c33', valueColor: '#1a3a1f', subColor: '#4e9955' },
       ]
     : [];
 
@@ -44,19 +66,25 @@ export function AdminOverview() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Overview Sistem</h1>
-        <p className="text-sm text-gray-500">Update otomatis setiap 30 detik</p>
+        <p className="text-xs text-gray-500 mt-0.5">Update otomatis setiap 30 detik</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {summaryCards.map((c) => (
-          <Card key={c.label}>
-            <CardContent className="py-4">
-              <p className="text-xs text-gray-500">{c.label}</p>
-              <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {metrics ? (
+        <div className="grid grid-cols-4 gap-3">
+          {summaryCards.map((c) => (
+            <MetricCard key={c.label} {...c} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-[10px] bg-white p-3 animate-pulse" style={{ border: '0.5px solid #c2ccc1', borderTop: '3px solid #e4e9e3' }}>
+              <div className="h-2.5 bg-gray-100 rounded w-3/4 mb-3"></div>
+              <div className="h-7 bg-gray-100 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Aktivitas Terkini</CardTitle></CardHeader>

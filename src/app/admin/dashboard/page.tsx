@@ -13,8 +13,8 @@ export default async function AdminDashboard() {
     <div className="flex flex-col h-screen">
       <Topbar user={user} />
       <div className="flex flex-1 overflow-hidden">
-        <AdminSidebar activeModule="overview" />
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <AdminSidebar />
+        <main className="flex-1 overflow-y-auto bg-brand-50 p-6">
           <AdminOverview />
         </main>
       </div>
