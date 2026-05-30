@@ -1,42 +1,42 @@
-# AromAI QC Platform
+# AromVision QC Platform
 
-**AI-powered Quality Control platform for Sima Arome's raw material and extract manufacturing pipeline.**
+**AI-powered Quality Control platform untuk proses manufaktur Sima Arome — buah segar & ekstrak natural.**
 
 Built for [CyberHack 2026](https://cyberhack.id) · Co-organised with UKM Cyber Security ITS · Sponsored by Xtremax, AWS, BuildPad
 
 ---
 
-## The Problem
+## Masalah yang Diselesaikan
 
-Sima Arome — Indonesia's natural extract manufacturer — faces three compounding bottlenecks:
+Sima Arome, produsen ekstrak natural Indonesia untuk F&B, kosmetik & wellness, menghadapi tiga hambatan utama:
 
-| Pain Point | Impact |
+| Pain Point | Dampak |
 |---|---|
-| Manual QC by trained eyes | Throughput halts when QC staff are unavailable |
-| Double data entry across notebooks, spreadsheets, and apps | Errors, rework, and blame loops |
-| No system of record | PPIC schedules, lot histories, and QC decisions live in people's heads |
+| QC manual dengan mata | Throughput berhenti ketika staf QC tidak ada |
+| Input data ganda di banyak tool | Error, rework, tidak ada satu sumber kebenaran |
+| Keputusan produksi di kepala orang | Riwayat lot, jadwal PPIC, dispatch tersebar di notebook & chat |
 
 ---
 
-## What AromAI Does
+## Apa yang Dilakukan AromVision
 
-AromAI is a **unified QC operations platform** that connects the inspection line directly to management review — replacing manual eyeballing and scattered spreadsheets with a single, auditable system.
+AromVision adalah **platform operasi QC terpadu** yang menghubungkan lini inspeksi langsung ke review manajemen — menggantikan pengecekan manual dan spreadsheet dengan satu sistem terintegrasi dan teraudit.
 
 ```
-Webcam / Camera
-     │
-     ▼
+Webcam / Kamera
+      │
+      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│               AromAI QC Platform  (Next.js 15)              │
+│           AromVision QC Platform  (Next.js 15)              │
 │                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │   Operator   │  │   Manager    │  │      Admin       │  │
 │  │  Dashboard   │  │  Dashboard   │  │      Panel       │  │
 │  │              │  │              │  │                  │  │
-│  │ • Camera QC  │  │ • Lot Queue  │  │ • User RBAC      │  │
-│  │ • Live YOLO  │  │ • AI Decision│  │ • Threshold Cfg  │  │
-│  │ • Lot Create │  │ • Override   │  │ • Audit Viewer   │  │
-│  │ • Shift Info │  │ • Escalation │  │ • Report Export  │  │
+│  │ • Mode Sim   │  │ • Lot Queue  │  │ • User RBAC      │  │
+│  │ • Mode Insp  │  │ • AI Decision│  │ • Threshold Cfg  │  │
+│  │ • Lot Create │  │ • Auto-Appr  │  │ • Audit Viewer   │  │
+│  │ • Shift Info │  │ • Override   │  │ • Report Export  │  │
 │  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
 │         └────────────────┬┘──────────────────-┘            │
 │                          │  Next.js API Routes              │
@@ -45,95 +45,96 @@ Webcam / Camera
 │  ┌─────────────┐  ┌────────────┐  ┌──────────────┐         │
 │  │  Supabase   │  │  YOLOv11   │  │  Nodemailer  │         │
 │  │ PostgreSQL  │  │  FastAPI   │  │    Email      │         │
-│  │  Auth + RLS │  │  Port 8000 │  │ Notifications │         │
+│  │  Auth + RLS │  │  (Railway) │  │ Notifications │         │
 │  └─────────────┘  └────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Key Features
+## Fitur Utama
+
+### Mode Inspeksi Ganda
+- **Mode Simulasi** — mock detection buah dengan distribusi probabilistik, selalu berjalan tanpa perlu YOLO service
+- **Mode Inspeksi** — deteksi real-time YOLOv11 via webcam, confidence threshold 0.45
 
 ### AI Quality Control (Focus Area 02)
-- **Real-time YOLO v11 inference** — webcam frame → FastAPI → bounding box overlays in < 100ms
-- **Per-object metrics**: rot level (0–100%), colour category, defect count, defect severity, anomaly score
-- **Graceful fallback**: mock detection mode when AI service is offline (demo always works)
-- **Model-agnostic**: swap the `.pt` model file to target extract powder, botanical inputs, or any visual QC domain
+- **YOLOv11 terlatih** — dataset Fruit Freshness Detection (960 gambar, 4 kelas: fresh / slightly_rotten / moderately_rotten / severely_rotten)
+- **Hasil training**: mAP50 **98.4%** · Precision **98.4%** · Recall **98.2%**
+- **Per-deteksi**: rot level, color category, defect count, defect severity, anomaly score
+- **14 jenis buah** didukung: Pisang, Apel, Buah Naga, Delima, Jeruk, Anggur, Lemon, Stroberi, Bolazakar, Leci, Blackberry, Bilberry, Buah Nangka, Nanas
+
+### Auto-Approval System
+- Batch dengan `avg_confidence ≥ 95%` **DAN** `avg_rot_level ≤ 5%` → langsung **APPROVED** tanpa antrian manajer
+- Di bawah threshold → masuk **MANAGER_REVIEW** untuk keputusan manual
+- Decision record otomatis dengan `is_system_decision: true`
 
 ### Integrated Operations System (Focus Area 01)
-- **Lot lifecycle management**: `INSPECTION_RUNNING → MANAGER_REVIEW → APPROVED / REJECTED / QUARANTINED / ESCALATED`
-- **State machine enforcement**: invalid transitions are rejected at the API layer
-- **Auto-decision engine**: configurable rule evaluation (confidence threshold, rot level, anomaly score) per product type and grade (A / B / C / Reject)
-- **Manager override**: full override with mandatory reason, recorded in audit trail
-- **Shift management**: operators and managers linked by shift (Pagi / Siang / Malam)
+- **Lifecycle lot**: `INSPECTION_RUNNING → MANAGER_REVIEW → APPROVED / REJECTED / QUARANTINED / ESCALATED`
+- **State machine** enforcement — transisi tidak valid ditolak di layer API
+- **Frame pipeline** — setiap deteksi tersimpan ke DB, aggregate otomatis saat sesi selesai
+- **Manajemen shift**: Operator & Manager terhubung per shift (Pagi / Siang / Malam)
 
 ### Enterprise Readiness
-- **RBAC** enforced at two layers: Next.js middleware (route-level) + Supabase RLS policies (database-level)
-- **Immutable audit logs**: Postgres trigger blocks `UPDATE` and `DELETE` on `audit_logs` — tamper-proof compliance trail
-- **Notification system**: in-app bell + email (nodemailer) per event type, configurable per role
-- **Automated reports**: daily, weekly, and monthly cron jobs with CSV export
-- **Configurable thresholds**: per-product-type grading rules stored in DB, editable by Admin without code changes
-- **Rate-limited authentication**: brute-force protection with lockout
+- **RBAC** dua layer: Next.js middleware + Supabase RLS
+- **Audit log immutable** — trigger Postgres blokir UPDATE & DELETE di `audit_logs`
+- **Notifikasi** in-app + email (nodemailer) per event type
+- **Laporan otomatis** harian, mingguan, bulanan + ekspor CSV
+- **Rate-limit login** — 5 percobaan gagal → lockout 15 menit
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
+| Layer | Teknologi |
 |---|---|
 | Frontend | Next.js 15 (App Router), React 19, Tailwind CSS |
 | Backend | Next.js API Routes, Zod validation |
 | Database | Supabase (PostgreSQL 15, Auth, RLS) |
-| AI Inference | YOLOv11 (Ultralytics), FastAPI, OpenCV |
+| AI Inference | YOLOv11 (Ultralytics 8.3.50), FastAPI, OpenCV |
+| AI Deployment | Railway (Dockerfile, CPU-only torch) |
 | Notifications | Nodemailer (email), in-app real-time |
-| Scheduling | node-cron (server-side cron jobs) |
+| Scheduling | node-cron |
 | Charts | Recharts |
-| Testing | Vitest + fast-check (property tests), Playwright (E2E) |
+| Testing | Vitest + fast-check, Playwright (E2E) |
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-
 - Node.js 20+
-- Python 3.10+
-- A [Supabase](https://supabase.com) project (free tier works)
+- Python 3.12+
+- Supabase project (free tier)
 
 ### 1. Clone & install
-
 ```bash
 git clone https://github.com/RafiAchmadN/TestHackathon.git aromai-qc
 cd aromai-qc
 npm install
 ```
 
-### 2. Configure environment
-
+### 2. Environment variables
 ```bash
 cp .env.local.example .env.local
-# Fill in your Supabase URL, anon key, and service role key
+# Isi NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+# Opsional: YOLO_SERVICE_URL=https://<url-railway>.railway.app
 ```
 
-### 3. Apply database migrations
-
-Run in the Supabase SQL editor (Dashboard → SQL Editor):
-
+### 3. Database migrations
+Jalankan di Supabase SQL Editor:
 ```
-supabase/migrations/001_initial_schema.sql   ← schema + enums + indexes + seed config
-supabase/migrations/002_rls_policies.sql     ← Row Level Security policies
+supabase/migrations/001_initial_schema.sql
+supabase/migrations/002_rls_policies.sql
 ```
 
 ### 4. Seed demo data
-
 ```bash
-# With Next.js running (npm run dev), POST to the seed endpoint:
+npm run dev
 curl -X POST http://localhost:3000/api/setup/seed \
   -H "Content-Type: application/json" \
   -d '{"token": "aromai-demo-seed"}'
 ```
-
-This creates three demo accounts and five sample lots covering every status in the lot lifecycle.
 
 ### 5. Demo credentials
 
@@ -143,108 +144,116 @@ This creates three demo accounts and five sample lots covering every status in t
 | Manager | manager@aromai.demo | AromAI2026! |
 | Operator | operator@aromai.demo | AromAI2026! |
 
-### 6. Start the AI service (optional — real YOLO inference)
-
-```bash
-# Terminal 1 — one-time model training (~15 min)
-npm run yolo:setup
-npm run yolo:train
-
-# Terminal 2 — inference server
-npm run yolo:start
-
-# Terminal 3 — Next.js
-npm run dev
-```
-
-The platform automatically detects whether the YOLO service is online and falls back to mock mode if not — **the demo works without training the model**.
-
-### 7. Start without AI (fastest for demo)
-
+### 6. Jalankan (tanpa YOLO — Mode Simulasi)
 ```bash
 npm run dev
-# Log in as operator@aromai.demo → start a live inspection → mock detections activate automatically
+# Login sebagai operator → buat lot → aktifkan kamera → pilih mode Simulasi
 ```
 
 ---
 
-## How the QC Pipeline Works
+## YOLO Service (Mode Inspeksi)
+
+### Lokal
+```bash
+cd yolo_service
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+# Model sudah tersedia di models/best.pt (terlatih)
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+### Production (Railway)
+1. Buka [railway.app](https://railway.app) → **New Service** → **GitHub Repo**
+2. Pilih repo ini, set **Root Directory = `yolo_service`**
+3. Railway otomatis detect `Dockerfile` dan build Python service
+4. Copy URL Railway → set di Amplify env: `YOLO_SERVICE_URL=https://<url>.railway.app`
+
+---
+
+## Alur Pipeline QC
 
 ```
-Operator creates a Lot
-        │
-        ▼
-Camera captures frames every 500ms
-        │
-        ▼
-Frame → base64 JPEG → /api/yolo/detect → FastAPI /detect → YOLOv11
-        │
-        ▼
-Result: object_class, confidence, rot_level, color_category,
-        defect_count, defect_severity, anomaly_score, bbox
-        │
-        ▼
-Frame data stored → InspectionReport aggregated on session close
-        │
-        ▼
-Auto-decision engine evaluates rules:
-  • avg_confidence >= confidence_min
-  • final_anomaly_score < quarantine_threshold
-  • grade-specific rot and defect thresholds
-        │
-        ▼
-Lot → MANAGER_REVIEW
-        │
-        ▼
-Manager: Approve / Reject / Quarantine / Escalate
-(every decision + override reason → audit_logs, immutable)
+Operator buat Lot
+      │
+      ▼
+Kamera capture frame tiap 1.5 detik
+      │
+      ▼
+Mode Simulasi: mockDetection()    Mode Inspeksi: YOLO FastAPI /detect
+      │                                    │
+      └──────────────┬────────────────────┘
+                     ▼
+        POST /api/inspection/frames (session auth)
+        → frame_data tersimpan di Supabase
+                     │
+                     ▼
+        Operator klik "Selesai Inspeksi"
+                     │
+                     ▼
+        completeSession() — agregat semua frame:
+        avg_confidence, avg_rot_level, avg_anomaly,
+        grade (A/B/C/Reject), pass/fail count
+                     │
+            ┌────────┴────────┐
+            ▼                 ▼
+    confidence≥95%      di bawah threshold
+    & rot≤5%
+            │                 │
+            ▼                 ▼
+        APPROVED          MANAGER_REVIEW
+     (otomatis)          Manager memutuskan:
+                     Approve / Reject / Quarantine / Escalate
 ```
 
 ---
 
-## Security Architecture
+## Arsitektur Keamanan
 
-| Layer | Control |
+| Layer | Kontrol |
 |---|---|
-| Transport | HTTPS (enforced by deployment platform) |
-| Authentication | Supabase Auth (JWT, 8-hour sessions) |
-| Authorisation | Role-based: middleware blocks route access by role |
-| Data isolation | Supabase RLS: Operators see only their lots; Managers see all; Admins manage all |
-| Audit trail | Immutable `audit_logs` table (Postgres trigger prevents UPDATE/DELETE) |
-| Login protection | 5-attempt rate limit per 15-minute window with automatic lockout |
-| Input validation | Zod schemas on every API route |
+| Transport | HTTPS (Amplify enforce) |
+| Autentikasi | Supabase Auth (JWT, 8 jam) |
+| Otorisasi | Role-based: middleware blokir akses per role |
+| Isolasi data | RLS: Operator hanya lihat lot sendiri |
+| Audit trail | `audit_logs` immutable (Postgres trigger) |
+| Login | Rate limit 5x / 15 menit → lockout |
+| Input | Zod schema di semua API route |
 
 ---
 
-## Project Structure
+## Struktur Project
 
 ```
 ├── src/
 │   ├── app/
-│   │   ├── admin/          ← Admin pages (dashboard, users, config, audit, reports)
-│   │   ├── manager/        ← Manager dashboard (lot queue + decision panel)
-│   │   ├── operator/       ← Operator dashboard (camera QC + lot creation)
-│   │   └── api/            ← API routes (auth, lots, inspection, decisions, reports…)
+│   │   ├── admin/          ← Dashboard, users, config, audit, reports
+│   │   ├── manager/        ← Lot queue + decision panel
+│   │   ├── operator/       ← Camera QC + lot creation
+│   │   └── api/            ← Auth, lots, inspection, decisions, reports…
 │   ├── components/
 │   │   ├── admin/
 │   │   ├── manager/
-│   │   ├── operator/       ← Camera panel + lot panel
-│   │   └── shared/         ← Topbar, notification bell, error boundary
+│   │   ├── operator/       ← CameraPanel (Simulasi/Inspeksi) + LotPanel + Workspace
+│   │   └── shared/         ← Topbar, NotificationBell, ErrorBoundary
 │   └── lib/
-│       ├── auto-decision.ts   ← Rule-based QC decision engine
-│       ├── state-machine.ts   ← Lot status transition enforcement
-│       ├── audit.ts           ← Immutable audit log writer
-│       ├── notifications.ts   ← Multi-channel notification dispatcher
-│       └── cron-jobs.ts       ← Scheduled report jobs
+│       ├── inspection-hooks.ts  ← Session completion + auto-approval engine
+│       ├── auto-decision.ts     ← Rule-based QC decision
+│       ├── state-machine.ts     ← Lot status transition enforcement
+│       ├── audit.ts             ← Immutable audit log writer
+│       ├── notifications.ts     ← Multi-channel notification dispatcher
+│       └── cron-jobs.ts         ← Scheduled report jobs
 ├── yolo_service/
 │   ├── main.py             ← FastAPI inference server
 │   ├── train.py            ← YOLOv11 training script
-│   ├── class_map.py        ← YOLO class → platform domain mapping
-│   └── SETUP.md            ← AI service setup guide
+│   ├── class_map.py        ← YOLO class → platform domain (14 buah)
+│   ├── models/best.pt      ← Model terlatih (mAP50 98.4%)
+│   ├── Dockerfile          ← CPU-only torch untuk Railway
+│   └── railway.toml        ← Railway deployment config
 └── supabase/
     └── migrations/
-        ├── 001_initial_schema.sql   ← Full schema + indexes + seeded defaults
-        └── 002_rls_policies.sql     ← Row Level Security (defense-in-depth)
+        ├── 001_initial_schema.sql
+        └── 002_rls_policies.sql
 ```
 
 ---
@@ -253,15 +262,15 @@ Manager: Approve / Reject / Quarantine / Escalate
 
 **[https://main.d1cao7uhcec3x9.amplifyapp.com](https://main.d1cao7uhcec3x9.amplifyapp.com)**
 
-> Deployed on BuildPad (AWS Amplify) · Use demo credentials above
+> Deployed on BuildPad (AWS Amplify) · Gunakan demo credentials di atas
 
 ---
 
-## The Team
+## Tim
 
 **Team Berkakang Fighter** · CyberHack 2026
 
-| Name | Role |
+| Nama | Role |
 |---|---|
 | Ainur Rizza | [Role] |
 | Rafi Achmad Nabihan | [Role] |
