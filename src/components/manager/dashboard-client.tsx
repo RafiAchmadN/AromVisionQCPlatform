@@ -9,7 +9,7 @@ export function ManagerDashboardClient() {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <div className="w-1/2 border-r border-gray-200 flex flex-col overflow-hidden">
+      <div className="w-1/2 border-r border-brand-100 flex flex-col overflow-hidden">
         <ManagerMonitorPanel onSelectLot={setSelectedLot} />
       </div>
       <div className="w-1/2 flex flex-col overflow-hidden">

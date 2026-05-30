@@ -251,7 +251,7 @@ Manager: Approve / Reject / Quarantine / Escalate
 
 ## Live Demo
 
-**[https://main.d1g00ngd7p9e7u.amplifyapp.com](https://main.d1g00ngd7p9e7u.amplifyapp.com)**
+**[https://main.d1cao7uhcec3x9.amplifyapp.com](https://main.d1cao7uhcec3x9.amplifyapp.com)**
 
 > Deployed on BuildPad (AWS Amplify) · Use demo credentials above
 

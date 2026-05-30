@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await getServerSession();
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
-  if (user.role !== 'Operator' && user.role !== 'Admin') {
+  if (user.role !== 'Operator') {
     return makeApiError(403, 'FORBIDDEN', 'Only operators can create lots');
   }
 

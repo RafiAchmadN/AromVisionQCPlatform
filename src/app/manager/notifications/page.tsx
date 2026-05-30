@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/auth';
 import { Topbar } from '@/components/shared/topbar';
 import { ManagerSidebar } from '@/components/manager/sidebar';
-import { ManagerDashboardClient } from '@/components/manager/dashboard-client';
+import { NotificationsView } from '@/components/shared/notifications-view';
 
-export default async function ManagerDashboard() {
+export default async function ManagerNotificationsPage() {
   const user = await getServerSession();
   if (!user) redirect('/login');
   if (user.role !== 'Manager') redirect('/login');
@@ -14,7 +14,9 @@ export default async function ManagerDashboard() {
       <Topbar user={user} />
       <div className="flex flex-1 overflow-hidden">
         <ManagerSidebar />
-        <ManagerDashboardClient />
+        <main className="flex-1 overflow-y-auto bg-brand-50 p-6">
+          <NotificationsView />
+        </main>
       </div>
     </div>
   );

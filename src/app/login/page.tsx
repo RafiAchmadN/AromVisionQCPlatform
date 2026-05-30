@@ -3,13 +3,6 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Leaf } from 'lucide-react';
-import type { UserRole } from '@/lib/types';
-
-const ROLE_REDIRECT: Record<UserRole, string> = {
-  Operator: '/operator/dashboard',
-  Manager: '/manager/dashboard',
-  Admin: '/admin/dashboard',
-};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,8 +30,7 @@ export default function LoginPage() {
         return;
       }
 
-      const role = data.role as UserRole;
-      router.replace(ROLE_REDIRECT[role] ?? '/login');
+      router.replace('/dashboard');
     } catch {
       setError('Terjadi kesalahan. Silakan coba lagi.');
     } finally {

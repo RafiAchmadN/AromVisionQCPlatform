@@ -30,15 +30,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
 
-  // Prevent self-demotion
+  // Read body ONCE — request stream can only be consumed once
+  const body = await request.json().catch(() => null);
+
+  // Prevent self-demotion or self-deactivation
   if (id === user.id) {
-    const body = await request.json().catch(() => null);
     if (body?.status === 'INACTIVE' || (body?.role && body.role !== 'Admin')) {
       return makeApiError(403, 'FORBIDDEN', 'Admin tidak bisa menonaktifkan atau mengubah role sendiri');
     }
   }
 
-  const body = await request.json().catch(() => null);
   const parsed = patchUserSchema.safeParse(body);
   if (!parsed.success) return makeApiError(400, 'VALIDATION_ERROR', 'Invalid input');
 
@@ -54,7 +55,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (error) return makeApiError(500, 'INTERNAL_ERROR', error.message);
 
-  // If deactivating, revoke auth session
+  // Sync role change to Supabase Auth user_metadata so middleware stays consistent
+  if (parsed.data.role) {
+    await supabaseAdmin.auth.admin.updateUserById(id, {
+      user_metadata: { role: parsed.data.role },
+    });
+  }
+
+  // Revoke active sessions after grace period when deactivating
   if (parsed.data.status === 'INACTIVE') {
     setTimeout(async () => {
       await supabaseAdmin.auth.admin.signOut(id, 'others');

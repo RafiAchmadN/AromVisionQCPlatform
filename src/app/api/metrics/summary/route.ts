@@ -5,6 +5,7 @@ import { makeApiError } from '@/lib/utils';
 export async function GET() {
   const user = await getServerSession();
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
+  if (user.role === 'Operator') return makeApiError(403, 'FORBIDDEN', 'Access denied');
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
