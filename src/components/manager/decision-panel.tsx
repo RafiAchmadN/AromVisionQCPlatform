@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,45 +22,43 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
   const [showEscalate, setShowEscalate] = useState(false);
   const [error, setError] = useState('');
 
-  // Load lot detail whenever selected lot changes
-  useEffect(() => {
-    if (!selectedLot) return;
-
+  const loadDetail = useCallback(async (lot: Lot) => {
     setReport(null);
     setAutoDecision(null);
+    setError('');
+    setLoading(true);
+    try {
+      const [reportRes, decisionRes] = await Promise.all([
+        fetch(`/api/inspection/reports/${lot.id}`),
+        fetch(`/api/decision/${lot.id}`, { method: 'POST' }),
+      ]);
+      if (reportRes.ok) {
+        setReport(await reportRes.json());
+      }
+      if (decisionRes.ok) {
+        const d = await decisionRes.json();
+        setAutoDecision(d.decision);
+      }
+      if (!reportRes.ok && !decisionRes.ok) {
+        setError('Data inspeksi belum tersedia. Gunakan keputusan manual di bawah.');
+      }
+    } catch {
+      setError('Gagal memuat detail. Periksa koneksi dan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Auto-load when lot changes
+  useEffect(() => {
+    if (!selectedLot) return;
     setDone(false);
     setDoneDecision('');
     setOverrideReason('');
     setEscalationReason('');
     setShowEscalate(false);
-    setError('');
-    setLoading(true);
-
-    async function load() {
-      try {
-        const [reportRes, decisionRes] = await Promise.all([
-          fetch(`/api/inspection/reports/${selectedLot!.id}`),
-          fetch(`/api/decision/${selectedLot!.id}`, { method: 'POST' }),
-        ]);
-        if (reportRes.ok) {
-          setReport(await reportRes.json());
-        } else {
-          setError('Laporan inspeksi belum tersedia untuk lot ini.');
-        }
-        if (decisionRes.ok) {
-          const d = await decisionRes.json();
-          setAutoDecision(d.decision);
-        }
-      } catch {
-        setError('Gagal memuat detail inspeksi.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLot?.id]);
+    loadDetail(selectedLot);
+  }, [selectedLot?.id, loadDetail]);
 
   async function confirmDecision(decision: string) {
     if (!selectedLot) return;
@@ -141,10 +140,21 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-      <h2 className="text-base font-semibold text-gray-800 pb-2 border-b border-gray-100">
-        Review & Keputusan
-        <span className="ml-2 text-xs font-normal text-brand-600">{selectedLot.batch_name}</span>
-      </h2>
+      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+        <div>
+          <h2 className="text-base font-semibold text-gray-800">Review & Keputusan</h2>
+          <p className="text-xs text-brand-600 mt-0.5">{selectedLot.batch_name}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => loadDetail(selectedLot)}
+          disabled={loading}
+          className="p-1.5 rounded-md text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-40"
+          title="Muat ulang"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
       {loading && (
         <div className="flex flex-col gap-2 animate-pulse">
@@ -250,10 +260,45 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
         </Card>
       )}
 
-      {!loading && !report && !error && (
-        <div className="text-center text-xs text-gray-400 py-8 italic">
-          Memuat data inspeksi...
-        </div>
+      {/* Manual decision fallback — always available for Manager */}
+      {!loading && !autoDecision && (
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Keputusan Manual</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-3 pt-0">
+            <p className="text-xs text-gray-500">
+              {error ? error : 'Ambil keputusan langsung tanpa menunggu auto-decision AI:'}
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="default" onClick={() => confirmDecision('APPROVED')} loading={confirming}>
+                Setujui
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => confirmDecision('REJECTED')} loading={confirming}>
+                Tolak
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => confirmDecision('QUARANTINED')} loading={confirming}>
+                Karantina
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShowEscalate(true)}>
+                Eskalasi
+              </Button>
+            </div>
+            {showEscalate && (
+              <div className="flex flex-col gap-2 mt-1">
+                <textarea
+                  className="border border-gray-300 rounded px-2 py-1.5 text-sm resize-none h-16 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  placeholder="Alasan eskalasi (wajib)..."
+                  value={escalationReason}
+                  onChange={(e) => setEscalationReason(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={escalate} disabled={!escalationReason} loading={confirming}>Kirim</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowEscalate(false)}>Batal</Button>
+                </div>
+              </div>
+            )}
+            {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

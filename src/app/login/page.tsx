@@ -2,51 +2,10 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Leaf, Eye, EyeOff } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 
-// Botanical mandala illustration — matching the AromVision logo aesthetic
-function BotanicalIllustration() {
-  const C = 140; // center
-  const rings = [
-    { count: 12, dist: 118, rx: 10, ry: 28, baseColor: '#0a3d25', altColor: '#0d4a2e' },
-    { count: 10, dist: 90,  rx: 8,  ry: 22, baseColor: '#155a3a', altColor: '#1a6b45' },
-    { count: 8,  dist: 66,  rx: 7,  ry: 18, baseColor: '#2d7a50', altColor: '#3d9a65' },
-    { count: 6,  dist: 46,  rx: 6,  ry: 14, baseColor: '#4ade80', altColor: '#22c55e' },
-  ];
-
-  return (
-    <svg width="280" height="280" viewBox="0 0 280 280" className="drop-shadow-2xl">
-      {/* Glow rings */}
-      <circle cx={C} cy={C} r="130" fill="rgba(45,92,51,0.07)"/>
-      <circle cx={C} cy={C} r="105" fill="rgba(45,92,51,0.09)"/>
-      <circle cx={C} cy={C} r="80"  fill="rgba(45,92,51,0.12)"/>
-      {/* Leaf rings */}
-      {rings.map((ring, ri) => (
-        Array.from({ length: ring.count }, (_, i) => {
-          const angle = (i * 360 / ring.count) + ri * 15;
-          return (
-            <ellipse
-              key={`${ri}-${i}`}
-              cx={C}
-              cy={C - ring.dist}
-              rx={ring.rx}
-              ry={ring.ry}
-              fill={i % 2 === 0 ? ring.baseColor : ring.altColor}
-              opacity={0.88}
-              transform={`rotate(${angle} ${C} ${C})`}
-            />
-          );
-        })
-      ))}
-      {/* Center flower */}
-      <circle cx={C} cy={C} r="26" fill="#1a5c3a"/>
-      <circle cx={C} cy={C} r="18" fill="#22c55e" opacity="0.9"/>
-      <circle cx={C} cy={C} r="10" fill="#0d3a20"/>
-      <circle cx={C} cy={C} r="4"  fill="#4ade80"/>
-    </svg>
-  );
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -91,7 +50,7 @@ export default function LoginPage() {
           style={{ background: 'radial-gradient(circle, #4e9955, transparent)', transform: 'translate(35%, 35%)' }}/>
 
         <div className="relative z-10 flex flex-col items-center gap-8 max-w-sm text-center">
-          <BotanicalIllustration />
+          <Image src="/logo.svg" alt="AromVision Logo" width={240} height={264} unoptimized priority />
 
           <div>
             <h1 className="text-4xl font-black text-brand-400 tracking-tight">AromVision</h1>
@@ -107,7 +66,7 @@ export default function LoginPage() {
             ].map(({ label, sub }) => (
               <div key={label} className="flex items-start gap-3 text-left">
                 <div className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <Leaf className="w-3 h-3 text-brand-300" />
+                  <span className="w-2 h-2 rounded-full bg-brand-300 inline-block" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-brand-300">{label}</p>

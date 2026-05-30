@@ -1,14 +1,26 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Search, RefreshCw } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Lot, MetricsSummary } from '@/lib/types';
 
 interface Props {
   onSelectLot?: (lot: Lot) => void;
+}
+
+const GRADE_COLORS: Record<string, string> = {
+  A: 'bg-green-50 text-green-700 border-green-200',
+  B: 'bg-brand-50 text-brand-700 border-brand-200',
+  C: 'bg-amber-50 text-amber-700 border-amber-200',
+  Reject: 'bg-red-50 text-red-700 border-red-200',
+};
+
+function timeAgo(dateStr: string) {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60_000);
+  if (diff < 1) return 'baru saja';
+  if (diff < 60) return `${diff}m lalu`;
+  return `${Math.floor(diff / 60)}j lalu`;
 }
 
 export function ManagerMonitorPanel({ onSelectLot }: Props) {
@@ -16,12 +28,14 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
   const [lots, setLots] = useState<Lot[]>([]);
   const [q, setQ] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchMetrics();
     fetchLots();
-    const id = setInterval(() => { fetchMetrics(); fetchLots(); }, 8_000);
+    const id = setInterval(() => { fetchMetrics(); fetchLots(); }, 5_000);
     return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchMetrics() {
@@ -39,6 +53,12 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
     }
   }
 
+  async function manualRefresh() {
+    setRefreshing(true);
+    await Promise.all([fetchMetrics(), fetchLots()]);
+    setRefreshing(false);
+  }
+
   function handleSearch(val: string) {
     setQ(val);
     fetchLots(val);
@@ -51,63 +71,116 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-      <h2 className="text-base font-semibold text-gray-800 pb-2 border-b border-gray-100">Monitoring</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+        <h2 className="text-base font-semibold text-gray-800">Monitoring</h2>
+        <button
+          type="button"
+          onClick={manualRefresh}
+          className="p-1.5 rounded-md text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+          title="Refresh sekarang"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
-      {/* Metrics Cards */}
+      {/* Metric cards */}
       {metrics && (
         <div className="grid grid-cols-2 gap-2">
-          <Card><CardContent className="py-2 px-3"><p className="text-xs text-gray-500">Pending Review</p><p className="text-xl font-bold text-orange-600">{metrics.pending_lots}</p></CardContent></Card>
-          <Card><CardContent className="py-2 px-3"><p className="text-xs text-gray-500">Pass Rate</p><p className="text-xl font-bold text-green-600">{metrics.pass_rate}%</p></CardContent></Card>
-          <Card><CardContent className="py-2 px-3"><p className="text-xs text-gray-500">Fail Rate</p><p className="text-xl font-bold text-red-600">{metrics.fail_rate}%</p></CardContent></Card>
-          <Card><CardContent className="py-2 px-3"><p className="text-xs text-gray-500">Avg Confidence</p><p className="text-xl font-bold text-blue-600">{(metrics.avg_confidence * 100).toFixed(1)}%</p></CardContent></Card>
+          <Card>
+            <CardContent className="py-2 px-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Pending</p>
+              <p className="text-2xl font-extrabold text-amber-600">{metrics.pending_lots}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="py-2 px-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Pass Rate</p>
+              <p className="text-2xl font-extrabold text-green-600">{metrics.pass_rate}%</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="py-2 px-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Fail Rate</p>
+              <p className="text-2xl font-extrabold text-red-600">{metrics.fail_rate}%</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="py-2 px-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Avg AI Conf</p>
+              <p className="text-2xl font-extrabold text-brand-600">{(metrics.avg_confidence * 100).toFixed(1)}%</p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Review Queue */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Review Queue</CardTitle>
-          <div className="relative mt-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500"
-              placeholder="Cari batch, operator..."
-              value={q}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Batch</TableHead>
-                <TableHead>Produk</TableHead>
-                <TableHead>Operator</TableHead>
-                <TableHead>Tanggal</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lots.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center text-gray-400 py-8">Tidak ada lot pending</TableCell></TableRow>
-              ) : (
-                lots.map((lot) => (
-                  <TableRow
-                    key={lot.id}
-                    onClick={() => selectLot(lot)}
-                    className={`cursor-pointer ${selectedId === lot.id ? 'bg-brand-50' : ''}`}
-                  >
-                    <TableCell className="font-medium text-xs">{lot.batch_name}</TableCell>
-                    <TableCell className="text-xs">{lot.product_type}</TableCell>
-                    <TableCell className="text-xs">{(lot.operator as { name?: string } | undefined)?.name ?? '-'}</TableCell>
-                    <TableCell className="text-xs">{new Date(lot.created_at).toLocaleDateString('id-ID')}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+        <input
+          className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
+          placeholder="Cari batch, produk..."
+          value={q}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Review queue as cards */}
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs font-semibold text-gray-700">
+            Antrian Review
+            {lots.length > 0 && (
+              <span className="ml-1.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                {lots.length}
+              </span>
+            )}
+          </p>
+        </div>
+
+        {lots.length === 0 ? (
+          <div className="text-center text-gray-400 py-8 text-xs italic">Tidak ada lot pending review</div>
+        ) : (
+          lots.map((lot) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const reports = (lot as any).inspection_reports as Array<{ final_grade: string }> | undefined;
+            const grade = reports?.[0]?.final_grade;
+            const isSelected = selectedId === lot.id;
+
+            return (
+              <button
+                key={lot.id}
+                type="button"
+                onClick={() => selectLot(lot)}
+                className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all ${
+                  isSelected
+                    ? 'bg-brand-50 border-brand-400 shadow-sm'
+                    : 'bg-white border-gray-100 hover:border-brand-300 hover:bg-brand-50/50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{lot.batch_name}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {lot.product_type} · {(lot.operator as { name?: string } | undefined)?.name ?? '-'}
+                      {' · '}
+                      {timeAgo(lot.status_changed_at ?? lot.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {grade && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${GRADE_COLORS[grade] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                        Grade {grade}
+                      </span>
+                    )}
+                    <Badge variant="warning" className="text-[9px] px-1.5 py-0 h-4">Review</Badge>
+                  </div>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

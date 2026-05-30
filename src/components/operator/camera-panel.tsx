@@ -18,23 +18,40 @@ interface Detection {
 
 type YoloStatus = 'checking' | 'online' | 'offline' | 'no-model';
 
-// ---------- fallback mock (dipakai bila YOLO service offline) ----------
+// ---------- fruit quality detection mock ----------
+const FRUIT_QUALITY = [
+  { name: 'Buah Segar',   rot: [2,  12] as [number,number], conf: [0.88, 0.98] as [number,number], defects: ['minor_bruise'],               weight: 0.60 },
+  { name: 'Busuk Ringan', rot: [25, 42] as [number,number], conf: [0.76, 0.90] as [number,number], defects: ['brown_spot', 'soft_area'],     weight: 0.22 },
+  { name: 'Busuk Sedang', rot: [50, 68] as [number,number], conf: [0.62, 0.80] as [number,number], defects: ['mold', 'brown_spot'],           weight: 0.13 },
+  { name: 'Busuk Berat',  rot: [75, 92] as [number,number], conf: [0.52, 0.72] as [number,number], defects: ['mold', 'decay', 'rupture'],    weight: 0.05 },
+];
+
+function rand(min: number, max: number) { return min + Math.random() * (max - min); }
+
 function mockDetection(w: number, h: number): Detection {
-  const conf = 0.65 + Math.random() * 0.34;
-  const rot = Math.random() * 40;
+  let r = Math.random();
+  let fc = FRUIT_QUALITY[0];
+  for (const q of FRUIT_QUALITY) { r -= q.weight; if (r <= 0) { fc = q; break; } }
+
+  const rot  = rand(fc.rot[0],  fc.rot[1]);
+  const conf = rand(fc.conf[0], fc.conf[1]);
+  const defectCount = fc.name === 'Buah Segar' ? Math.floor(Math.random() * 2) : 1 + Math.floor(Math.random() * fc.defects.length);
+
+  const bw = rand(130, 210);
+  const bh = rand(110, 190);
   return {
-    object_class: ['apel', 'pisang', 'jeruk', 'tomat'][Math.floor(Math.random() * 4)],
-    confidence_score: conf,
-    rot_level: rot,
-    color_category: rot < 15 ? 'Normal' : rot < 40 ? 'Pucat' : 'Terlalu Matang',
-    defect_count: Math.floor(Math.random() * 4),
-    defect_severity: rot < 20 ? 'Minor' : rot < 50 ? 'Moderate' : 'Severe',
-    anomaly_score: rot / 100 + (1 - conf) * 0.2,
+    object_class: fc.name,
+    confidence_score: parseFloat(conf.toFixed(3)),
+    rot_level: parseFloat(rot.toFixed(1)),
+    color_category: rot < 15 ? 'Normal' : rot < 40 ? 'Pucat' : rot < 70 ? 'Terlalu Matang' : 'Abnormal',
+    defect_count: defectCount,
+    defect_severity: rot < 20 ? 'Minor' : rot < 55 ? 'Moderate' : 'Severe',
+    anomaly_score: parseFloat(((rot / 100) * 0.65 + (1 - conf) * 0.35).toFixed(4)),
     bbox: {
-      x: 40 + Math.random() * (w - 200),
-      y: 40 + Math.random() * (h - 200),
-      w: 80 + Math.random() * 120,
-      h: 80 + Math.random() * 120,
+      x: rand(w * 0.12, w * 0.88 - bw),
+      y: rand(h * 0.12, h * 0.88 - bh),
+      w: bw,
+      h: bh,
     },
   };
 }

@@ -3,15 +3,16 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Users, Package, FileText, Settings, ScrollText, Bell, LogOut } from 'lucide-react';
+import { NotifBadge } from '@/components/shared/notif-badge';
 
 const NAV_ITEMS = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/users', label: 'Pengguna', icon: Users },
-  { href: '/admin/lots', label: 'Lot', icon: Package },
-  { href: '/admin/reports', label: 'Laporan', icon: FileText },
-  { href: '/admin/config', label: 'Konfigurasi', icon: Settings },
-  { href: '/admin/audit', label: 'Audit Log', icon: ScrollText },
-  { href: '/admin/notifications', label: 'Notifikasi', icon: Bell },
+  { href: '/admin/dashboard',       label: 'Dashboard',    icon: LayoutDashboard, badge: false },
+  { href: '/admin/users',           label: 'Pengguna',     icon: Users,           badge: false },
+  { href: '/admin/lots',            label: 'Lot',          icon: Package,         badge: false },
+  { href: '/admin/reports',         label: 'Laporan',      icon: FileText,        badge: false },
+  { href: '/admin/config',          label: 'Konfigurasi',  icon: Settings,        badge: false },
+  { href: '/admin/audit',           label: 'Audit Log',    icon: ScrollText,      badge: false },
+  { href: '/admin/notifications',   label: 'Notifikasi',   icon: Bell,            badge: true  },
 ];
 
 export function AdminSidebar() {
@@ -45,6 +46,7 @@ export function AdminSidebar() {
             >
               <Icon className="h-[15px] w-[15px] shrink-0" />
               {item.label}
+              {item.badge && <NotifBadge />}
             </Link>
           );
         })}

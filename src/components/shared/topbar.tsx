@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { NotificationBell } from './notification-bell';
@@ -6,34 +7,6 @@ import type { User } from '@/lib/types';
 
 interface TopbarProps {
   user: User;
-}
-
-function AromVisionLogo() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      {/* 8 outer dark leaves */}
-      {Array.from({ length: 8 }, (_, i) => (
-        <ellipse
-          key={`outer-${i}`}
-          cx="15" cy="6" rx="2.2" ry="6"
-          fill={i % 2 === 0 ? '#0a3d25' : '#0f4d30'}
-          transform={`rotate(${i * 45} 15 15)`}
-        />
-      ))}
-      {/* 8 inner bright leaves offset 22.5° */}
-      {Array.from({ length: 8 }, (_, i) => (
-        <ellipse
-          key={`inner-${i}`}
-          cx="15" cy="8.5" rx="1.8" ry="4.5"
-          fill={i % 2 === 0 ? '#2d7a50' : '#4ade80'}
-          transform={`rotate(${i * 45 + 22.5} 15 15)`}
-        />
-      ))}
-      {/* Center */}
-      <circle cx="15" cy="15" r="4.5" fill="#22c55e" opacity="0.9"/>
-      <circle cx="15" cy="15" r="2" fill="#0a3d25"/>
-    </svg>
-  );
 }
 
 export function Topbar({ user }: TopbarProps) {
@@ -50,7 +23,7 @@ export function Topbar({ user }: TopbarProps) {
       style={{ background: 'linear-gradient(90deg, #050e08 0%, #0d1f10 35%, #142d18 65%, #1e3a25 100%)' }}
     >
       <div className="flex items-center gap-2.5">
-        <AromVisionLogo />
+        <Image src="/logo.svg" alt="AromVision" width={28} height={28} className="shrink-0" unoptimized />
         <span className="text-sm font-bold text-brand-400 tracking-[0.3px]">AromVision</span>
       </div>
       <div className="flex items-center gap-3">

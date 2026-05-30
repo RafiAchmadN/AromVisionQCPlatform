@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Bell, LogOut } from 'lucide-react';
+import { NotifBadge } from '@/components/shared/notif-badge';
 
 const NAV_ITEMS = [
-  { href: '/operator/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/operator/notifications', label: 'Notifikasi', icon: Bell },
+  { href: '/operator/dashboard',     label: 'Dashboard', icon: LayoutDashboard, badge: false },
+  { href: '/operator/notifications', label: 'Notifikasi',icon: Bell,            badge: true  },
 ];
 
 export function OperatorSidebar() {
@@ -40,6 +41,7 @@ export function OperatorSidebar() {
             >
               <Icon className="h-[15px] w-[15px] shrink-0" />
               {item.label}
+              {item.badge && <NotifBadge />}
             </Link>
           );
         })}

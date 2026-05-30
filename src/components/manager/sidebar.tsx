@@ -3,11 +3,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, FileText, Bell, LogOut } from 'lucide-react';
+import { NotifBadge } from '@/components/shared/notif-badge';
 
 const NAV_ITEMS = [
-  { href: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/manager/reports', label: 'Laporan', icon: FileText },
-  { href: '/manager/notifications', label: 'Notifikasi', icon: Bell },
+  { href: '/manager/dashboard',     label: 'Dashboard', icon: LayoutDashboard, badge: false },
+  { href: '/manager/reports',       label: 'Laporan',   icon: FileText,        badge: false },
+  { href: '/manager/notifications', label: 'Notifikasi',icon: Bell,            badge: true  },
 ];
 
 export function ManagerSidebar() {
@@ -41,6 +42,7 @@ export function ManagerSidebar() {
             >
               <Icon className="h-[15px] w-[15px] shrink-0" />
               {item.label}
+              {item.badge && <NotifBadge />}
             </Link>
           );
         })}
