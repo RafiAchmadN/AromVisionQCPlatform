@@ -2,12 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System libs yang dibutuhkan opencv
+# System libs minimal untuk opencv-python-headless
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
-    libgl1 \
-    libsm6 \
-    libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CPU-only torch dulu (jauh lebih kecil dari GPU torch: ~200MB vs 2GB)
@@ -18,7 +15,8 @@ RUN pip install --no-cache-dir \
 
 # Install dependensi lain
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir "opencv-python-headless==4.10.0.84" --force-reinstall
 
 # Copy source code dan model
 COPY . .
