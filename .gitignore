@@ -49,4 +49,4 @@ yolo_service/dataset/
 yolo_service/runs/
 yolo_service/__pycache__/
 yolo_service/*.pt
-yolo_service/models/*.pt
+# models/best.pt TIDAK di-ignore agar bisa di-deploy ke Railway

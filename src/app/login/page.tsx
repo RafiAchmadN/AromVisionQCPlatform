@@ -17,13 +17,19 @@ function ParticleField() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    const resize = () => {
+      // fallback ke parent atau window jika offsetWidth masih 0 saat mount
+      canvas.width  = canvas.offsetWidth  || canvas.parentElement?.offsetWidth  || window.innerWidth  / 2;
+      canvas.height = canvas.offsetHeight || canvas.parentElement?.offsetHeight || window.innerHeight;
+    };
+    // Delay resize sekali agar layout sudah terhitung
     resize();
+    const t = setTimeout(resize, 50);
     window.addEventListener('resize', resize);
 
     const particles: Particle[] = Array.from({ length: 35 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
+      x: Math.random() * (canvas.width  || 600),
+      y: Math.random() * (canvas.height || 800),
       size: 1.5 + Math.random() * 3,
       speed: 0.2 + Math.random() * 0.4,
       opacity: 0.15 + Math.random() * 0.35,
@@ -61,7 +67,7 @@ function ParticleField() {
       raf = requestAnimationFrame(draw);
     }
     draw();
-    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(raf); };
+    return () => { clearTimeout(t); window.removeEventListener('resize', resize); cancelAnimationFrame(raf); };
   }, []);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
