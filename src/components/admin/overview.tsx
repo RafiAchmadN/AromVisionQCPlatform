@@ -18,12 +18,12 @@ interface MetricCardProps {
 function MetricCard({ label, value, sub, borderColor, valueColor, subColor }: MetricCardProps) {
   return (
     <div
-      className="rounded-[10px] bg-white p-3"
-      style={{ border: '0.5px solid #c2ccc1', borderTop: `3px solid ${borderColor}` }}
+      className="metric-card rounded-xl bg-white p-3.5 border border-[#c8d4c8]"
+      style={{ borderTop: `3px solid ${borderColor}` }}
     >
-      <p className="text-[10px] font-semibold tracking-[0.5px] uppercase text-gray-500 mb-1">{label}</p>
-      <p className="text-[26px] font-extrabold leading-none tracking-tight" style={{ color: valueColor }}>{value}</p>
-      {sub && <p className="text-[11px] font-medium mt-1.5" style={{ color: subColor ?? borderColor }}>{sub}</p>}
+      <p className="text-[10px] font-bold tracking-[0.8px] uppercase text-gray-400 mb-1.5">{label}</p>
+      <p className="text-[28px] font-extrabold leading-none tracking-tight" style={{ color: valueColor }}>{value}</p>
+      {sub && <p className="text-[11px] font-semibold mt-2" style={{ color: subColor ?? borderColor }}>{sub}</p>}
     </div>
   );
 }
@@ -170,22 +170,30 @@ export function AdminOverview() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Overview Sistem</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Update otomatis setiap 30 detik</p>
+      {/* Header */}
+      <div className="animate-fade-up">
+        <div className="flex items-center gap-3">
+          <div className="h-6 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
+          <h1 className="text-xl font-bold text-gray-900">Overview Sistem</h1>
+        </div>
+        <p className="text-xs text-gray-400 mt-0.5 ml-4">Update otomatis setiap 15 detik</p>
       </div>
 
-      {/* Metric cards */}
+      {/* Metric cards with stagger */}
       {metrics ? (
         <div className="grid grid-cols-4 gap-3">
-          {summaryCards.map((c) => <MetricCard key={c.label} {...c} />)}
+          {summaryCards.map((c, i) => (
+            <div key={c.label} className={`animate-fade-up delay-${[50,100,150,200,250,300,400,500][i] ?? 100}`}>
+              <MetricCard {...c} />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-[10px] bg-white p-3 animate-pulse" style={{ border: '0.5px solid #c2ccc1', borderTop: '3px solid #e4e9e3' }}>
-              <div className="h-2.5 bg-gray-100 rounded w-3/4 mb-3"/>
-              <div className="h-7 bg-gray-100 rounded w-1/2"/>
+            <div key={i} className="rounded-xl bg-white p-3.5 border border-[#c8d4c8] animate-pulse" style={{ borderTop: '3px solid #e4e9e3' }}>
+              <div className="h-2.5 shimmer rounded w-3/4 mb-3"/>
+              <div className="h-7 shimmer rounded w-1/2"/>
             </div>
           ))}
         </div>
@@ -193,7 +201,7 @@ export function AdminOverview() {
 
       {/* Charts row */}
       {metrics && (metrics.grade_distribution || metrics.daily_trend) && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 animate-fade-up delay-300">
           {/* Grade distribution */}
           {metrics.grade_distribution && (
             <Card>
@@ -237,8 +245,13 @@ export function AdminOverview() {
       )}
 
       {/* Recent activity */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Aktivitas Terkini</CardTitle></CardHeader>
+      <Card className="animate-fade-up delay-400">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <span className="h-3 w-1 rounded-full bg-brand-500 inline-block" />
+            Aktivitas Terkini
+          </CardTitle>
+        </CardHeader>
         <Table>
           <TableHeader>
             <TableRow>

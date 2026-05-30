@@ -344,8 +344,11 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-brand-100">
-        <h2 className="text-base font-semibold text-gray-800">Live Camera & QC Monitor</h2>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-brand-100 bg-gradient-to-r from-brand-50 to-white">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
+          <h2 className="text-base font-semibold text-gray-800">Live Camera & QC Monitor</h2>
+        </div>
         <div className="flex items-center gap-2">
           {/* Mode toggle */}
           <div className="flex rounded-md border border-brand-200 overflow-hidden text-xs font-semibold">

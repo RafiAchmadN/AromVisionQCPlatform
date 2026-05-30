@@ -333,7 +333,8 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
   // ─── FORM STATE (default) ───────────────────────────────────
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-      <div className="flex items-center gap-2 pb-2 border-b border-brand-100">
+      <div className="flex items-center gap-2 pb-2 border-b border-brand-100 bg-gradient-to-r from-brand-50 to-white -mx-4 px-4 pt-1">
+        <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
         <h2 className="text-base font-semibold text-gray-800">Inisialisasi Lot</h2>
       </div>
       <Card>

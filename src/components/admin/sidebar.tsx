@@ -6,18 +6,18 @@ import { LayoutDashboard, Users, Package, FileText, Settings, ScrollText, Bell, 
 import { NotifBadge } from '@/components/shared/notif-badge';
 
 const NAV_ITEMS = [
-  { href: '/admin/dashboard',       label: 'Dashboard',    icon: LayoutDashboard, badge: false },
-  { href: '/admin/users',           label: 'Pengguna',     icon: Users,           badge: false },
-  { href: '/admin/lots',            label: 'Lot',          icon: Package,         badge: false },
-  { href: '/admin/reports',         label: 'Laporan',      icon: FileText,        badge: false },
-  { href: '/admin/config',          label: 'Konfigurasi',  icon: Settings,        badge: false },
-  { href: '/admin/audit',           label: 'Audit Log',    icon: ScrollText,      badge: false },
-  { href: '/admin/notifications',   label: 'Notifikasi',   icon: Bell,            badge: true  },
+  { href: '/admin/dashboard',     label: 'Dashboard',   icon: LayoutDashboard, badge: false },
+  { href: '/admin/users',         label: 'Pengguna',    icon: Users,           badge: false },
+  { href: '/admin/lots',          label: 'Lot',         icon: Package,         badge: false },
+  { href: '/admin/reports',       label: 'Laporan',     icon: FileText,        badge: false },
+  { href: '/admin/config',        label: 'Konfigurasi', icon: Settings,        badge: false },
+  { href: '/admin/audit',         label: 'Audit Log',   icon: ScrollText,      badge: false },
+  { href: '/admin/notifications', label: 'Notifikasi',  icon: Bell,            badge: true  },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
+  const router   = useRouter();
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -25,41 +25,47 @@ export function AdminSidebar() {
   }
 
   return (
-    <aside
-      className="w-[180px] flex flex-col shrink-0 border-r border-brand-600/60"
-      style={{ background: 'linear-gradient(180deg, #050e08 0%, #0d1f10 30%, #142d18 60%, #1e3d2e 85%, #2d5042 100%)' }}
-    >
-      <nav className="flex flex-col gap-0.5 p-2 pt-3 flex-1">
+    <aside className="w-[180px] flex flex-col shrink-0 border-r border-brand-700/50 relative overflow-hidden sidebar-base">
+      <div className="absolute inset-0 bg-dot-pattern opacity-30 pointer-events-none" />
+      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full pointer-events-none opacity-20 sidebar-orb-top" />
+
+      <div className="relative z-10 mx-3 mt-3 mb-1 px-2.5 py-1 rounded-md text-center sidebar-role-pill">
+        <span className="text-[9px] font-bold uppercase tracking-[2px] text-brand-400">Admin Panel</span>
+      </div>
+
+      <nav className="relative z-10 flex flex-col gap-0.5 p-2 flex-1">
         {NAV_ITEMS.map((item) => {
           const active = pathname.startsWith(item.href);
-          const Icon = item.icon;
+          const Icon   = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors',
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200',
                 active
-                  ? 'bg-brand-600 text-brand-200'
-                  : 'text-brand-500 hover:text-brand-300 hover:bg-white/5'
+                  ? 'nav-active-glow text-brand-200'
+                  : 'text-brand-500 hover:text-brand-200 hover:bg-white/8 hover:translate-x-0.5',
               )}
             >
-              <Icon className="h-[15px] w-[15px] shrink-0" />
+              <Icon className={cn('h-[15px] w-[15px] shrink-0', active && 'text-brand-300')} />
               {item.label}
               {item.badge && <NotifBadge />}
             </Link>
           );
         })}
-        <hr className="border-brand-600/50 my-1.5" />
+        <div className="my-1.5 h-px bg-gradient-to-r from-transparent via-brand-600/50 to-transparent" />
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-red-400 hover:text-red-300 hover:bg-white/5 transition-colors w-full text-left"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-400/80 hover:text-red-300 hover:bg-red-900/20 transition-all duration-200 w-full text-left"
         >
           <LogOut className="h-[15px] w-[15px] shrink-0" />
           Keluar
         </button>
       </nav>
+
+      <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full pointer-events-none opacity-10 sidebar-orb-bottom" />
     </aside>
   );
 }

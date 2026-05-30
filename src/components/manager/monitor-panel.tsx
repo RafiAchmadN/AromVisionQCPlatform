@@ -72,8 +72,11 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-        <h2 className="text-base font-semibold text-gray-800">Monitoring</h2>
+      <div className="flex items-center justify-between pb-2 border-b border-brand-100">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
+          <h2 className="text-base font-semibold text-gray-800">Monitoring</h2>
+        </div>
         <button
           type="button"
           onClick={manualRefresh}
@@ -87,30 +90,19 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
       {/* Metric cards */}
       {metrics && (
         <div className="grid grid-cols-2 gap-2">
-          <Card>
-            <CardContent className="py-2 px-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Pending</p>
-              <p className="text-2xl font-extrabold text-amber-600">{metrics.pending_lots}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-2 px-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Pass Rate</p>
-              <p className="text-2xl font-extrabold text-green-600">{metrics.pass_rate}%</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-2 px-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Fail Rate</p>
-              <p className="text-2xl font-extrabold text-red-600">{metrics.fail_rate}%</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-2 px-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Avg AI Conf</p>
-              <p className="text-2xl font-extrabold text-brand-600">{(metrics.avg_confidence * 100).toFixed(1)}%</p>
-            </CardContent>
-          </Card>
+          {[
+            { label: 'Pending',    value: metrics.pending_lots,                        color: 'text-amber-600'  },
+            { label: 'Pass Rate',  value: `${metrics.pass_rate}%`,                     color: 'text-green-600'  },
+            { label: 'Fail Rate',  value: `${metrics.fail_rate}%`,                     color: 'text-red-600'    },
+            { label: 'Avg AI Conf',value: `${(metrics.avg_confidence * 100).toFixed(1)}%`, color: 'text-brand-600' },
+          ].map((m, i) => (
+            <Card key={m.label} className={`animate-fade-up delay-${[50,100,150,200][i]}`}>
+              <CardContent className="py-2.5 px-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{m.label}</p>
+                <p className={`text-2xl font-extrabold ${m.color}`}>{m.value}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 

@@ -140,10 +140,13 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
-      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-        <div>
-          <h2 className="text-base font-semibold text-gray-800">Review & Keputusan</h2>
-          <p className="text-xs text-brand-600 mt-0.5">{selectedLot.batch_name}</p>
+      <div className="flex items-center justify-between pb-2 border-b border-brand-100">
+        <div className="flex items-start gap-2">
+          <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600 mt-0.5 shrink-0" />
+          <div>
+            <h2 className="text-base font-semibold text-gray-800">Review & Keputusan</h2>
+            <p className="text-xs text-brand-600 mt-0.5">{selectedLot.batch_name}</p>
+          </div>
         </div>
         <button
           type="button"

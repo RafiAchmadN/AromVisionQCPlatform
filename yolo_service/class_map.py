@@ -2,9 +2,18 @@
 # Buah yang digunakan Sima Arome untuk ekstrak kosmetik & F&B
 
 CLASS_MAP: dict[str, dict] = {
-    # === Kelas generik (fresh/rotten tanpa nama buah) ===
-    "fresh":  {"object_class": "buah_segar", "is_fresh": True},
+    # === Kelas dari dataset BRAC University v3 (4 tingkat kesegaran) ===
+    "fresh":              {"object_class": "buah_segar",      "is_fresh": True},
+    "slightly_rotten":    {"object_class": "busuk_ringan",    "is_fresh": False},
+    "moderately_rotten":  {"object_class": "busuk_sedang",    "is_fresh": False},
+    "severely_rotten":    {"object_class": "busuk_berat",     "is_fresh": False},
+    # Fallback kelas generik
     "rotten": {"object_class": "buah_busuk", "is_fresh": False},
+    # Kelas numerik (sebelum rename)
+    "0": {"object_class": "buah_segar",   "is_fresh": True},
+    "1": {"object_class": "busuk_ringan", "is_fresh": False},
+    "2": {"object_class": "busuk_sedang", "is_fresh": False},
+    "3": {"object_class": "busuk_berat",  "is_fresh": False},
 
     # === PISANG ===
     "freshbanana":  {"object_class": "pisang", "is_fresh": True},
