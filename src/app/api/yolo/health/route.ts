@@ -3,7 +3,7 @@ const YOLO_SERVICE = process.env.YOLO_SERVICE_URL ?? 'https://aromvisionqcplatfo
 export async function GET() {
   try {
     const res = await fetch(`${YOLO_SERVICE}/health`, {
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(8000),
     });
     const data = await res.json();
     return Response.json(data);

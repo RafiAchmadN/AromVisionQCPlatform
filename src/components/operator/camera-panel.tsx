@@ -130,22 +130,28 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
 
-  // YOLO health check
+  // YOLO health check — requires 2 consecutive failures before marking offline
   useEffect(() => {
     let mounted = true;
+    let failCount = 0;
     async function check() {
       try {
-        const res = await fetch('/api/yolo/health');
+        const res = await fetch('/api/yolo/health', { signal: AbortSignal.timeout(9000) });
         if (!res.ok) throw new Error();
         const data = await res.json();
         if (!mounted) return;
+        failCount = 0;
         if      (data.status === 'offline') setYoloStatus('offline');
         else if (!data.model_loaded)        setYoloStatus('no-model');
         else                                setYoloStatus('online');
-      } catch { if (mounted) setYoloStatus('offline'); }
+      } catch {
+        if (!mounted) return;
+        failCount++;
+        if (failCount >= 2) setYoloStatus('offline');
+      }
     }
     check();
-    const t = setInterval(check, 10_000);
+    const t = setInterval(check, 15_000);
     return () => { mounted = false; clearInterval(t); };
   }, []);
 
