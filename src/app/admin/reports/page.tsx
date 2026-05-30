@@ -63,7 +63,10 @@ function ReportPanel({ period }: { period: Period }) {
 
   if (!data) return null;
 
-  const total = data.total_lots as number ?? 0;
+  const total = (data.total_lots as number) ?? 0;
+  const breakdown = data.breakdown_by_product as Record<string, number> | undefined;
+  const gradeDistribution = data.grade_distribution as Record<string, number> | undefined;
+  const shiftBreakdown = data.shift_breakdown as Record<string, number> | undefined;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 flex flex-col gap-4">
@@ -83,11 +86,11 @@ function ReportPanel({ period }: { period: Period }) {
         {data.avg_duration_min !== undefined && <StatCard label="Rata-rata Durasi" value={`${data.avg_duration_min} mnt`} />}
       </div>
 
-      {data.breakdown_by_product && Object.keys(data.breakdown_by_product as object).length > 0 && (
+      {breakdown && Object.keys(breakdown).length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-600 mb-2">Per Produk</p>
           <div className="grid grid-cols-3 gap-2">
-            {Object.entries(data.breakdown_by_product as Record<string, number>).map(([k, v]) => (
+            {Object.entries(breakdown).map(([k, v]) => (
               <div key={k} className="rounded border border-gray-100 bg-gray-50 px-3 py-2 flex justify-between">
                 <span className="text-xs text-gray-700">{k}</span>
                 <span className="text-xs font-semibold text-gray-900">{v}</span>
@@ -97,11 +100,11 @@ function ReportPanel({ period }: { period: Period }) {
         </div>
       )}
 
-      {data.grade_distribution && Object.keys(data.grade_distribution as object).length > 0 && (
+      {gradeDistribution && Object.keys(gradeDistribution).length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-600 mb-2">Distribusi Grade</p>
           <div className="grid grid-cols-4 gap-2">
-            {Object.entries(data.grade_distribution as Record<string, number>).map(([k, v]) => (
+            {Object.entries(gradeDistribution).map(([k, v]) => (
               <div key={k} className="rounded border border-gray-100 bg-gray-50 px-3 py-2 flex justify-between">
                 <span className="text-xs text-gray-700">Grade {k}</span>
                 <span className="text-xs font-semibold text-gray-900">{v}</span>
@@ -111,11 +114,11 @@ function ReportPanel({ period }: { period: Period }) {
         </div>
       )}
 
-      {data.shift_breakdown && Object.keys(data.shift_breakdown as object).length > 0 && (
+      {shiftBreakdown && Object.keys(shiftBreakdown).length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-600 mb-2">Per Shift</p>
           <div className="grid grid-cols-3 gap-2">
-            {Object.entries(data.shift_breakdown as Record<string, number>).map(([k, v]) => (
+            {Object.entries(shiftBreakdown).map(([k, v]) => (
               <div key={k} className="rounded border border-gray-100 bg-gray-50 px-3 py-2 flex justify-between">
                 <span className="text-xs text-gray-700">{k}</span>
                 <span className="text-xs font-semibold text-gray-900">{v}</span>
