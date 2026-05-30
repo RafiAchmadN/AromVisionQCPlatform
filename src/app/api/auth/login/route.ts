@@ -9,8 +9,8 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-// Simple in-memory rate limiter for failed logins
-// In production, replace with Redis-backed solution
+// In-memory rate limiter: 5 failed attempts per 15-minute window → 15-minute lockout.
+// Resets on server restart; acceptable for single-instance deployments.
 const failedAttempts = new Map<string, { count: number; firstAt: number; lockedUntil?: number }>();
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 5;
