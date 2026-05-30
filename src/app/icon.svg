@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 440">
+  <!-- Outer ring: 8 large dark teal leaves -->
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0a3d25" transform="rotate(0 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0d4a2e" transform="rotate(45 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0a3d25" transform="rotate(90 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0d4a2e" transform="rotate(135 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0a3d25" transform="rotate(180 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0d4a2e" transform="rotate(225 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0a3d25" transform="rotate(270 200 200)"/>
+  <ellipse cx="200" cy="38" rx="19" ry="58" fill="#0d4a2e" transform="rotate(315 200 200)"/>
+  <!-- Outer ring highlight lines -->
+  <ellipse cx="200" cy="38" rx="4" ry="52" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2" transform="rotate(0 200 200)"/>
+  <ellipse cx="200" cy="38" rx="4" ry="52" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2" transform="rotate(90 200 200)"/>
+  <ellipse cx="200" cy="38" rx="4" ry="52" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2" transform="rotate(180 200 200)"/>
+  <ellipse cx="200" cy="38" rx="4" ry="52" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2" transform="rotate(270 200 200)"/>
+
+  <!-- Middle ring: 8 medium teal-green leaves (offset 22.5°) -->
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#1a6b50" transform="rotate(22.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#22804a" transform="rotate(67.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#1a6b50" transform="rotate(112.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#22804a" transform="rotate(157.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#1a6b50" transform="rotate(202.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#22804a" transform="rotate(247.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#1a6b50" transform="rotate(292.5 200 200)"/>
+  <ellipse cx="200" cy="65" rx="15" ry="46" fill="#22804a" transform="rotate(337.5 200 200)"/>
+
+  <!-- Inner ring: 6 bright green petals -->
+  <ellipse cx="200" cy="95" rx="12" ry="36" fill="#2dbe70" transform="rotate(0 200 200)"/>
+  <ellipse cx="200" cy="95" rx="12" ry="36" fill="#4ade80" transform="rotate(60 200 200)"/>
+  <ellipse cx="200" cy="95" rx="12" ry="36" fill="#2dbe70" transform="rotate(120 200 200)"/>
+  <ellipse cx="200" cy="95" rx="12" ry="36" fill="#4ade80" transform="rotate(180 200 200)"/>
+  <ellipse cx="200" cy="95" rx="12" ry="36" fill="#2dbe70" transform="rotate(240 200 200)"/>
+  <ellipse cx="200" cy="95" rx="12" ry="36" fill="#4ade80" transform="rotate(300 200 200)"/>
+
+  <!-- Circular border ring -->
+  <circle cx="200" cy="200" r="188" fill="none" stroke="#1a5c3a" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Central dark circle layers -->
+  <circle cx="200" cy="200" r="78" fill="#071a0e"/>
+  <circle cx="200" cy="200" r="68" fill="#0d2e1f"/>
+  <circle cx="200" cy="200" r="50" fill="#1a7a55" opacity="0.5"/>
+  <circle cx="200" cy="200" r="36" fill="#071a0e"/>
+
+  <!-- Center flower petals (6 small) -->
+  <ellipse cx="200" cy="175" rx="6" ry="12" fill="#2dbe70" opacity="0.8" transform="rotate(0 200 200)"/>
+  <ellipse cx="200" cy="175" rx="6" ry="12" fill="#4ade80" opacity="0.8" transform="rotate(60 200 200)"/>
+  <ellipse cx="200" cy="175" rx="6" ry="12" fill="#2dbe70" opacity="0.8" transform="rotate(120 200 200)"/>
+  <ellipse cx="200" cy="175" rx="6" ry="12" fill="#4ade80" opacity="0.8" transform="rotate(180 200 200)"/>
+  <ellipse cx="200" cy="175" rx="6" ry="12" fill="#2dbe70" opacity="0.8" transform="rotate(240 200 200)"/>
+  <ellipse cx="200" cy="175" rx="6" ry="12" fill="#4ade80" opacity="0.8" transform="rotate(300 200 200)"/>
+  <circle cx="200" cy="200" r="10" fill="#22c55e"/>
+  <circle cx="200" cy="200" r="4" fill="#071a0e"/>
+
+  <!-- AROMVISION text -->
+  <text x="200" y="207" text-anchor="middle" font-family="Impact,Arial Black,Helvetica,sans-serif" font-size="21" fill="white" letter-spacing="3" font-weight="900">AROMVISION</text>
+
+  <!-- Decorative top elements -->
+  <circle cx="200" cy="6"  r="5"   fill="#4ade80" opacity="0.75"/>
+  <circle cx="186" cy="14" r="3.5" fill="#2dbe70" opacity="0.65"/>
+  <circle cx="214" cy="14" r="3.5" fill="#2dbe70" opacity="0.65"/>
+  <circle cx="172" cy="25" r="3"   fill="#1a6b50" opacity="0.55"/>
+  <circle cx="228" cy="25" r="3"   fill="#1a6b50" opacity="0.55"/>
+  <circle cx="158" cy="38" r="2.5" fill="#0d4a2e" opacity="0.4"/>
+  <circle cx="242" cy="38" r="2.5" fill="#0d4a2e" opacity="0.4"/>
+  <!-- Small branch left -->
+  <line x1="160" y1="35" x2="148" y2="24" stroke="#1a6b50" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="144" cy="20" r="3" fill="#2dbe70" opacity="0.5"/>
+  <!-- Small branch right -->
+  <line x1="240" y1="35" x2="252" y2="24" stroke="#1a6b50" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="256" cy="20" r="3" fill="#2dbe70" opacity="0.5"/>
+
+  <!-- Bottom ink drip effects -->
+  <ellipse cx="200" cy="393" rx="5" ry="9"   fill="#0a3d25"/>
+  <ellipse cx="200" cy="405" rx="3" ry="5"   fill="#0a3d25"/>
+  <circle  cx="193" cy="388" r="3.5" fill="#0d4a2e"/>
+  <circle  cx="207" cy="390" r="3"   fill="#0d4a2e"/>
+  <circle  cx="196" cy="415" r="2.5" fill="#071a0e"/>
+  <circle  cx="204" cy="418" r="2"   fill="#071a0e"/>
+</svg>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AromAI QC Platform',
+  title: 'AromVision',
   description: 'Enterprise-grade AI quality control platform',
 };
 
