@@ -1,67 +1,116 @@
-# Mapping dari kelas YOLO (dataset Adithya - Fresh and Rotten Fruit Detection)
-# ke field platform AromAI QC
-#
-# Dataset v1 (Roboflow): hanya 2 kelas — 'Fresh' dan 'Rotten'
-# Dataset versi lain mungkin punya kelas spesifik per buah.
+# Mapping dari kelas YOLO ke field platform AromVision QC
+# Buah yang digunakan Sima Arome untuk ekstrak kosmetik & F&B
 
 CLASS_MAP: dict[str, dict] = {
-    # === Kelas generik dataset Adithya v1 ===
-    "fresh":  {"object_class": "buah_segar",  "is_fresh": True},
-    "rotten": {"object_class": "buah_busuk",  "is_fresh": False},
-    # === FRESH (segar) — rot_level rendah ===
-    "freshapple":      {"object_class": "apel",     "is_fresh": True},
-    "freshbanana":     {"object_class": "pisang",   "is_fresh": True},
-    "freshorange":     {"object_class": "jeruk",    "is_fresh": True},
-    "freshtomato":     {"object_class": "tomat",    "is_fresh": True},
-    "freshmango":      {"object_class": "mangga",   "is_fresh": True},
-    "freshgrape":      {"object_class": "anggur",   "is_fresh": True},
-    "freshstrawberry": {"object_class": "stroberi", "is_fresh": True},
-    "freshwatermelon": {"object_class": "semangka", "is_fresh": True},
-    "freshpapaya":     {"object_class": "pepaya",   "is_fresh": True},
-    "freshguava":      {"object_class": "jambu",    "is_fresh": True},
-    # Variasi dengan spasi / underscore
-    "fresh apple":      {"object_class": "apel",   "is_fresh": True},
-    "fresh banana":     {"object_class": "pisang", "is_fresh": True},
-    "fresh orange":     {"object_class": "jeruk",  "is_fresh": True},
-    "fresh tomato":     {"object_class": "tomat",  "is_fresh": True},
-    "fresh_apple":      {"object_class": "apel",   "is_fresh": True},
-    "fresh_banana":     {"object_class": "pisang", "is_fresh": True},
-    "fresh_orange":     {"object_class": "jeruk",  "is_fresh": True},
-    "fresh_tomato":     {"object_class": "tomat",  "is_fresh": True},
+    # === Kelas generik (fresh/rotten tanpa nama buah) ===
+    "fresh":  {"object_class": "buah_segar", "is_fresh": True},
+    "rotten": {"object_class": "buah_busuk", "is_fresh": False},
 
-    # === ROTTEN (busuk) — rot_level tinggi ===
-    "rottenapple":      {"object_class": "apel",     "is_fresh": False},
-    "rottenbanana":     {"object_class": "pisang",   "is_fresh": False},
-    "rottenorange":     {"object_class": "jeruk",    "is_fresh": False},
-    "rottentomato":     {"object_class": "tomat",    "is_fresh": False},
-    "rottenmango":      {"object_class": "mangga",   "is_fresh": False},
-    "rottengrape":      {"object_class": "anggur",   "is_fresh": False},
-    "rottenstrawberry": {"object_class": "stroberi", "is_fresh": False},
-    "rottenwatermelon": {"object_class": "semangka", "is_fresh": False},
-    "rottenpapaya":     {"object_class": "pepaya",   "is_fresh": False},
-    "rottenguava":      {"object_class": "jambu",    "is_fresh": False},
-    # Variasi
-    "rotten apple":      {"object_class": "apel",   "is_fresh": False},
-    "rotten banana":     {"object_class": "pisang", "is_fresh": False},
-    "rotten orange":     {"object_class": "jeruk",  "is_fresh": False},
-    "rotten tomato":     {"object_class": "tomat",  "is_fresh": False},
-    "rotten_apple":      {"object_class": "apel",   "is_fresh": False},
-    "rotten_banana":     {"object_class": "pisang", "is_fresh": False},
-    "rotten_orange":     {"object_class": "jeruk",  "is_fresh": False},
-    "rotten_tomato":     {"object_class": "tomat",  "is_fresh": False},
+    # === PISANG ===
+    "freshbanana":  {"object_class": "pisang", "is_fresh": True},
+    "rottenbanana": {"object_class": "pisang", "is_fresh": False},
+    "fresh banana": {"object_class": "pisang", "is_fresh": True},
+    "rotten banana":{"object_class": "pisang", "is_fresh": False},
+    "fresh_banana": {"object_class": "pisang", "is_fresh": True},
+    "rotten_banana":{"object_class": "pisang", "is_fresh": False},
+    "banana":       {"object_class": "pisang", "is_fresh": True},
+
+    # === APEL ===
+    "freshapple":   {"object_class": "apel", "is_fresh": True},
+    "rottenapple":  {"object_class": "apel", "is_fresh": False},
+    "fresh apple":  {"object_class": "apel", "is_fresh": True},
+    "rotten apple": {"object_class": "apel", "is_fresh": False},
+    "fresh_apple":  {"object_class": "apel", "is_fresh": True},
+    "rotten_apple": {"object_class": "apel", "is_fresh": False},
+    "apple":        {"object_class": "apel", "is_fresh": True},
+
+    # === BUAH NAGA (Dragon Fruit) ===
+    "freshdragon":       {"object_class": "buah_naga", "is_fresh": True},
+    "rottendragon":      {"object_class": "buah_naga", "is_fresh": False},
+    "fresh dragon":      {"object_class": "buah_naga", "is_fresh": True},
+    "rotten dragon":     {"object_class": "buah_naga", "is_fresh": False},
+    "fresh dragonfruit": {"object_class": "buah_naga", "is_fresh": True},
+    "rotten dragonfruit":{"object_class": "buah_naga", "is_fresh": False},
+    "dragonfruit":       {"object_class": "buah_naga", "is_fresh": True},
+    "dragon fruit":      {"object_class": "buah_naga", "is_fresh": True},
+    "buah_naga":         {"object_class": "buah_naga", "is_fresh": True},
+
+    # === DELIMA (Pomegranate) ===
+    "freshpomegranate":   {"object_class": "delima", "is_fresh": True},
+    "rottenpomegranate":  {"object_class": "delima", "is_fresh": False},
+    "fresh pomegranate":  {"object_class": "delima", "is_fresh": True},
+    "rotten pomegranate": {"object_class": "delima", "is_fresh": False},
+    "pomegranate":        {"object_class": "delima", "is_fresh": True},
+    "delima":             {"object_class": "delima", "is_fresh": True},
+
+    # === JERUK (Orange) ===
+    "freshorange":   {"object_class": "jeruk", "is_fresh": True},
+    "rottenorange":  {"object_class": "jeruk", "is_fresh": False},
+    "fresh orange":  {"object_class": "jeruk", "is_fresh": True},
+    "rotten orange": {"object_class": "jeruk", "is_fresh": False},
+    "fresh_orange":  {"object_class": "jeruk", "is_fresh": True},
+    "rotten_orange": {"object_class": "jeruk", "is_fresh": False},
+    "orange":        {"object_class": "jeruk", "is_fresh": True},
+
+    # === ANGGUR (Grape) ===
+    "freshgrape":   {"object_class": "anggur", "is_fresh": True},
+    "rottengrape":  {"object_class": "anggur", "is_fresh": False},
+    "fresh grape":  {"object_class": "anggur", "is_fresh": True},
+    "rotten grape": {"object_class": "anggur", "is_fresh": False},
+    "grape":        {"object_class": "anggur", "is_fresh": True},
+
+    # === LEMON ===
+    "freshlemon":   {"object_class": "lemon", "is_fresh": True},
+    "rottenlemon":  {"object_class": "lemon", "is_fresh": False},
+    "fresh lemon":  {"object_class": "lemon", "is_fresh": True},
+    "rotten lemon": {"object_class": "lemon", "is_fresh": False},
+    "lemon":        {"object_class": "lemon", "is_fresh": True},
+
+    # === STROBERI (Strawberry) ===
+    "freshstrawberry":   {"object_class": "stroberi", "is_fresh": True},
+    "rottenstrawberry":  {"object_class": "stroberi", "is_fresh": False},
+    "fresh strawberry":  {"object_class": "stroberi", "is_fresh": True},
+    "rotten strawberry": {"object_class": "stroberi", "is_fresh": False},
+    "strawberry":        {"object_class": "stroberi", "is_fresh": True},
+
+    # === BOLAZAKAR ===
+    "bolazakar":         {"object_class": "bolazakar", "is_fresh": True},
+    "fresh bolazakar":   {"object_class": "bolazakar", "is_fresh": True},
+    "rotten bolazakar":  {"object_class": "bolazakar", "is_fresh": False},
+}
+
+
+# Mapping nama buah Indonesia ke nama kelas YOLO untuk fallback
+_ID_TO_ENGLISH: dict[str, str] = {
+    "pisang": "banana", "apel": "apple", "buah_naga": "dragonfruit",
+    "delima": "pomegranate", "jeruk": "orange", "anggur": "grape",
+    "lemon": "lemon", "stroberi": "strawberry", "bolazakar": "bolazakar",
 }
 
 
 def resolve_class(yolo_class_name: str) -> dict:
-    """Cari mapping dari nama kelas YOLO. Fallback: anggap segar, nama = yolo class."""
-    key = yolo_class_name.lower().strip()
+    """Resolve nama kelas YOLO → metadata platform. Fallback: prefix fresh/rotten."""
+    key = yolo_class_name.lower().strip().replace("-", " ").replace("_", " ")
+    key_underscore = key.replace(" ", "_")
+
+    # Direct lookup
     if key in CLASS_MAP:
         return CLASS_MAP[key]
-    # Coba tebak berdasarkan prefix
-    if key.startswith("fresh") or key.startswith("segar"):
-        fruit = key.replace("fresh", "").replace("segar", "").strip("_ ")
+    if key_underscore in CLASS_MAP:
+        return CLASS_MAP[key_underscore]
+
+    # Prefix-based fallback
+    if key.startswith("fresh"):
+        fruit = key.removeprefix("fresh").strip()
         return {"object_class": fruit or key, "is_fresh": True}
-    if key.startswith("rotten") or key.startswith("busuk"):
-        fruit = key.replace("rotten", "").replace("busuk", "").strip("_ ")
+    if key.startswith("rotten"):
+        fruit = key.removeprefix("rotten").strip()
         return {"object_class": fruit or key, "is_fresh": False}
+    if key.startswith("segar"):
+        fruit = key.removeprefix("segar").strip()
+        return {"object_class": fruit or key, "is_fresh": True}
+    if key.startswith("busuk"):
+        fruit = key.removeprefix("busuk").strip()
+        return {"object_class": fruit or key, "is_fresh": False}
+
     return {"object_class": key, "is_fresh": True}

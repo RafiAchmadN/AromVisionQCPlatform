@@ -8,12 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import type { LiveSessionAggregate } from '@/lib/types';
 
 const PRODUCT_TYPES = [
-  { value: 'bawang_merah', label: 'Bawang Merah' },
-  { value: 'bawang_putih', label: 'Bawang Putih' },
-  { value: 'cabai_merah', label: 'Cabai Merah' },
-  { value: 'tomat', label: 'Tomat' },
-  { value: 'kentang', label: 'Kentang' },
-  { value: 'wortel', label: 'Wortel' },
+  { value: 'pisang',     label: 'Pisang' },
+  { value: 'apel',       label: 'Apel' },
+  { value: 'buah_naga',  label: 'Buah Naga' },
+  { value: 'delima',     label: 'Delima' },
+  { value: 'jeruk',      label: 'Jeruk' },
+  { value: 'anggur',     label: 'Anggur' },
+  { value: 'lemon',      label: 'Lemon' },
+  { value: 'stroberi',   label: 'Stroberi' },
+  { value: 'bolazakar',  label: 'Bolazakar' },
 ];
 
 const SHIFT_OPTIONS = [
