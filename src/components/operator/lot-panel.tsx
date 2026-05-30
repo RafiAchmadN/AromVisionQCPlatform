@@ -8,15 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import type { LiveSessionAggregate } from '@/lib/types';
 
 const PRODUCT_TYPES = [
-  { value: 'pisang',     label: 'Pisang' },
-  { value: 'apel',       label: 'Apel' },
-  { value: 'buah_naga',  label: 'Buah Naga' },
-  { value: 'delima',     label: 'Delima' },
-  { value: 'jeruk',      label: 'Jeruk' },
-  { value: 'anggur',     label: 'Anggur' },
-  { value: 'lemon',      label: 'Lemon' },
-  { value: 'stroberi',   label: 'Stroberi' },
-  { value: 'bolazakar',  label: 'Bolazakar' },
+  { value: 'pisang',      label: 'Pisang' },
+  { value: 'apel',        label: 'Apel' },
+  { value: 'buah_naga',   label: 'Buah Naga' },
+  { value: 'delima',      label: 'Delima' },
+  { value: 'jeruk',       label: 'Jeruk' },
+  { value: 'anggur',      label: 'Anggur' },
+  { value: 'lemon',       label: 'Lemon' },
+  { value: 'stroberi',    label: 'Stroberi' },
+  { value: 'bolazakar',   label: 'Bolazakar' },
+  { value: 'leci',        label: 'Leci' },
+  { value: 'blackberry',  label: 'Blackberry' },
+  { value: 'bilberry',    label: 'Bilberry' },
+  { value: 'buah_nangka', label: 'Buah Nangka' },
+  { value: 'nanas',       label: 'Nanas' },
 ];
 
 const SHIFT_OPTIONS = [

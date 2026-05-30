@@ -77,6 +77,45 @@ CLASS_MAP: dict[str, dict] = {
     "bolazakar":         {"object_class": "bolazakar", "is_fresh": True},
     "fresh bolazakar":   {"object_class": "bolazakar", "is_fresh": True},
     "rotten bolazakar":  {"object_class": "bolazakar", "is_fresh": False},
+
+    # === LECI (Lychee) ===
+    "freshlychee":   {"object_class": "leci", "is_fresh": True},
+    "rottenlychee":  {"object_class": "leci", "is_fresh": False},
+    "fresh lychee":  {"object_class": "leci", "is_fresh": True},
+    "rotten lychee": {"object_class": "leci", "is_fresh": False},
+    "lychee":        {"object_class": "leci", "is_fresh": True},
+    "litchi":        {"object_class": "leci", "is_fresh": True},
+    "leci":          {"object_class": "leci", "is_fresh": True},
+
+    # === BLACKBERRY ===
+    "freshblackberry":   {"object_class": "blackberry", "is_fresh": True},
+    "rottenblackberry":  {"object_class": "blackberry", "is_fresh": False},
+    "fresh blackberry":  {"object_class": "blackberry", "is_fresh": True},
+    "rotten blackberry": {"object_class": "blackberry", "is_fresh": False},
+    "blackberry":        {"object_class": "blackberry", "is_fresh": True},
+
+    # === BILBERRY ===
+    "freshbilberry":   {"object_class": "bilberry", "is_fresh": True},
+    "rottenbilberry":  {"object_class": "bilberry", "is_fresh": False},
+    "fresh bilberry":  {"object_class": "bilberry", "is_fresh": True},
+    "rotten bilberry": {"object_class": "bilberry", "is_fresh": False},
+    "bilberry":        {"object_class": "bilberry", "is_fresh": True},
+
+    # === BUAH NANGKA (Jackfruit) ===
+    "freshjackfruit":   {"object_class": "buah_nangka", "is_fresh": True},
+    "rottenjackfruit":  {"object_class": "buah_nangka", "is_fresh": False},
+    "fresh jackfruit":  {"object_class": "buah_nangka", "is_fresh": True},
+    "rotten jackfruit": {"object_class": "buah_nangka", "is_fresh": False},
+    "jackfruit":        {"object_class": "buah_nangka", "is_fresh": True},
+    "buah_nangka":      {"object_class": "buah_nangka", "is_fresh": True},
+
+    # === NANAS (Pineapple) ===
+    "freshpineapple":   {"object_class": "nanas", "is_fresh": True},
+    "rottenpineapple":  {"object_class": "nanas", "is_fresh": False},
+    "fresh pineapple":  {"object_class": "nanas", "is_fresh": True},
+    "rotten pineapple": {"object_class": "nanas", "is_fresh": False},
+    "pineapple":        {"object_class": "nanas", "is_fresh": True},
+    "nanas":            {"object_class": "nanas", "is_fresh": True},
 }
 
 
@@ -85,6 +124,8 @@ _ID_TO_ENGLISH: dict[str, str] = {
     "pisang": "banana", "apel": "apple", "buah_naga": "dragonfruit",
     "delima": "pomegranate", "jeruk": "orange", "anggur": "grape",
     "lemon": "lemon", "stroberi": "strawberry", "bolazakar": "bolazakar",
+    "leci": "lychee", "blackberry": "blackberry", "bilberry": "bilberry",
+    "buah_nangka": "jackfruit", "nanas": "pineapple",
 }
 
 
