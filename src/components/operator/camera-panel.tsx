@@ -130,25 +130,18 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
 
-  // YOLO health check — requires 2 consecutive failures before marking offline
+  // YOLO health check — status indicator only, never flips to offline on network failure
   useEffect(() => {
     let mounted = true;
-    let failCount = 0;
     async function check() {
       try {
         const res = await fetch('/api/yolo/health', { signal: AbortSignal.timeout(9000) });
         if (!res.ok) throw new Error();
         const data = await res.json();
         if (!mounted) return;
-        failCount = 0;
-        if      (data.status === 'offline') setYoloStatus('offline');
-        else if (!data.model_loaded)        setYoloStatus('no-model');
-        else                                setYoloStatus('online');
-      } catch {
-        if (!mounted) return;
-        failCount++;
-        if (failCount >= 2) setYoloStatus('offline');
-      }
+        if      (!data.model_loaded) setYoloStatus('no-model');
+        else                         setYoloStatus('online');
+      } catch { /* network error — keep current status, don't flip to offline */ }
     }
     check();
     const t = setInterval(check, 15_000);
@@ -216,7 +209,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) return;
 
-    const useRealYolo = mode === 'inspection' && yoloStatus === 'online';
+    const useRealYolo = mode === 'inspection';
 
     if (useRealYolo) {
       const b64 = captureFrame(video);
@@ -242,7 +235,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         drawOverlay(dets, canvas, data.frame_w ?? canvas.width, data.frame_h ?? canvas.height);
         for (const det of dets) saveFrame(det).catch(() => {});
       } catch {
-        setYoloStatus('offline');
+        setError('Gagal menghubungi YOLO service. Cek koneksi.');
       } finally {
         pendingRef.current = false;
       }
@@ -263,8 +256,8 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       setError('Camera API tidak tersedia. Gunakan localhost atau HTTPS.');
       return;
     }
-    if (mode === 'inspection' && yoloStatus !== 'online') {
-      setError('Mode Inspeksi memerlukan YOLO service online. Jalankan uvicorn di folder yolo_service/.');
+    if (mode === 'inspection' && yoloStatus === 'no-model') {
+      setError('Model YOLO belum tersedia di server.');
       return;
     }
     try {
