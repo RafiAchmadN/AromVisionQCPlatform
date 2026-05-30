@@ -109,7 +109,7 @@ Webcam / Kamera
 
 ### 1. Clone & install
 ```bash
-git clone https://github.com/RafiAchmadN/TestHackathon.git aromai-qc
+git clone https://github.com/RafiAchmadN/AromVisionQCPlatform.git aromai-qc
 cd aromai-qc
 npm install
 ```
