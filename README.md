@@ -272,9 +272,9 @@ Mode Simulasi: mockDetection()    Mode Inspeksi: YOLO FastAPI /detect
 
 | Nama | Role |
 |---|---|
-| Ainur Rizza | [Role] |
-| Rafi Achmad Nabihan | [Role] |
-| Medika Alfian | [Role] |
+| Ainur Rizza | AI/ML Engineer |
+| Rafi Achmad Nabihan | Full Stack Developer |
+| Medika Alfian | UI/UX Designer |
 
 ---
 
