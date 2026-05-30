@@ -42,3 +42,11 @@ supabase/.temp
 # Playwright
 playwright-report/
 test-results/
+
+# YOLO service
+yolo_service/.venv/
+yolo_service/dataset/
+yolo_service/runs/
+yolo_service/__pycache__/
+yolo_service/*.pt
+yolo_service/models/*.pt

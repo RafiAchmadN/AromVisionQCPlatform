@@ -151,7 +151,7 @@ export function OperatorCameraPanel() {
         const res = await fetch('/api/yolo/detect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_b64: b64, conf: 0.45 }),
+          body: JSON.stringify({ image_b64: b64, conf: 0.02 }),
         });
         if (!res.ok) throw new Error('detect failed');
         const data = await res.json();
