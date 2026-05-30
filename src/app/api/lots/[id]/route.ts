@@ -37,7 +37,6 @@ const patchSchema = z.object({
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getServerSession();
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
-  if (user.role === 'Operator') return makeApiError(403, 'FORBIDDEN', 'Operators cannot update lots');
 
   const { id } = await params;
   const { data: current, error: fetchError } = await supabaseAdmin
@@ -53,6 +52,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return makeApiError(400, 'VALIDATION_ERROR', 'Invalid input');
+
+  // Operator can only submit their own INSPECTION_RUNNING lot → MANAGER_REVIEW
+  if (user.role === 'Operator') {
+    if (currentLot.operator_id !== user.id) {
+      return makeApiError(403, 'FORBIDDEN', 'Access denied');
+    }
+    if (currentLot.status !== 'INSPECTION_RUNNING') {
+      return makeApiError(403, 'FORBIDDEN', 'Hanya bisa mengakhiri inspeksi yang sedang berjalan');
+    }
+    if (parsed.data.status !== 'MANAGER_REVIEW') {
+      return makeApiError(403, 'FORBIDDEN', 'Operator hanya bisa mengirim lot untuk review manager');
+    }
+  }
 
   if (parsed.data.status) {
     if (!isValidTransition(currentLot.status as LotStatus, parsed.data.status as LotStatus)) {

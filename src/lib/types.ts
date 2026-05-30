@@ -280,6 +280,8 @@ export interface MetricsSummary {
   active_operators: number;
   active_managers: number;
   unhandled_alerts: number;
+  grade_distribution?: { A: number; B: number; C: number; Reject: number };
+  daily_trend?: Array<{ date: string; approved: number; rejected: number; total: number }>;
 }
 
 // ─── YOLO Frame Payload ───────────────────────────────────────────────────────
