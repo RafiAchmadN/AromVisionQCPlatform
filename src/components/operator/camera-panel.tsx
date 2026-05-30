@@ -466,12 +466,21 @@ export function OperatorCameraPanel({ activeSession }: Props) {
 
       {/* ── Mode info bar ── */}
       {mode === 'inspection' && yoloStatus !== 'online' && (
-        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-xs text-amber-800 shrink-0">
+        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-xs text-amber-800 shrink-0 flex flex-col gap-1">
           {yoloStatus === 'no-model' && (
-            <span>Model belum ada. Jalankan <code className="font-mono bg-amber-100 px-1 rounded">python train.py</code> di folder <code className="font-mono bg-amber-100 px-1 rounded">yolo_service/</code></span>
+            <span>Model belum terlatih. Jalankan <code className="font-mono bg-amber-100 px-1 rounded">python train.py</code> di folder <code className="font-mono bg-amber-100 px-1 rounded">yolo_service/</code></span>
           )}
           {(yoloStatus === 'offline' || yoloStatus === 'checking') && (
-            <span>YOLO service offline. Jalankan: <code className="font-mono bg-amber-100 px-1 rounded">uvicorn main:app --port 8000</code> atau gunakan mode Simulasi.</span>
+            <>
+              <span className="font-semibold">YOLO service tidak terhubung.</span>
+              <span>
+                <strong>Lokal:</strong> jalankan <code className="font-mono bg-amber-100 px-1 rounded">uvicorn main:app --port 8000</code> di folder <code className="font-mono bg-amber-100 px-1 rounded">yolo_service/</code>
+              </span>
+              <span>
+                <strong>Production:</strong> deploy YOLO service ke Railway/Render, lalu set env <code className="font-mono bg-amber-100 px-1 rounded">YOLO_SERVICE_URL</code> di Amplify.
+              </span>
+              <span className="text-amber-600">Gunakan mode <strong>Simulasi</strong> untuk demo tanpa YOLO service.</span>
+            </>
           )}
         </div>
       )}

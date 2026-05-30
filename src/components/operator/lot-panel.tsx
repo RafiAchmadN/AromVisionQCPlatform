@@ -46,6 +46,7 @@ interface Props {
 export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onSessionEnd }: Props) {
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
+  const [autoApproved, setAutoApproved] = useState(false);
   const [activeLotId, setActiveLotId] = useState<string | null>(null);
   const [activeLotCode, setActiveLotCode] = useState<string>('');
   const [aggregate, setAggregate] = useState<LiveSessionAggregate | null>(null);
@@ -110,6 +111,9 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
         body: JSON.stringify({ status: 'MANAGER_REVIEW' }),
       });
       if (res.ok) {
+        const finalLot = await res.json();
+        // Cek apakah sistem auto-approve (confidence>=95% & rot<=5%)
+        setAutoApproved(finalLot?.status === 'APPROVED');
         setSessionActive(false);
         setSessionDone(true);
         onSessionEnd?.();
@@ -127,6 +131,7 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
   function startNew() {
     setSessionDone(false);
     setSessionActive(false);
+    setAutoApproved(false);
     setActiveLotId(null);
     setActiveLotCode('');
     setAggregate(null);
@@ -160,22 +165,42 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
       <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
         <div className="flex items-center gap-2 pb-2 border-b border-brand-100">
           <h2 className="text-base font-semibold text-gray-800">Inspeksi Selesai</h2>
-          <Badge variant="success">Terkirim ke Manager</Badge>
+          {autoApproved
+            ? <Badge variant="success">Auto-Approved</Badge>
+            : <Badge variant="warning">Menunggu Review Manager</Badge>
+          }
         </div>
 
-        <div className={`rounded-xl border-2 p-5 flex flex-col items-center gap-2 ${GRADE_BG[grade] ?? 'bg-gray-50 border-gray-200'}`}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Estimasi Grade</p>
-          <p className={`text-6xl font-black ${GRADE_COLORS[grade] ?? 'text-gray-900'}`}>{grade}</p>
-          <p className="text-xs text-gray-500 font-mono">{activeLotCode}</p>
-        </div>
+        {/* Status utama: auto-approved vs menunggu manajer */}
+        {autoApproved ? (
+          <div className="rounded-xl border-2 border-green-300 bg-green-50 p-5 flex flex-col items-center gap-2 text-center">
+            <div className="w-12 h-12 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center text-2xl">
+              ✓
+            </div>
+            <p className="text-sm font-bold text-green-700">Batch Disetujui Otomatis</p>
+            <p className="text-xs text-green-600">
+              Kualitas prima terdeteksi — batch ini melewati threshold auto-approval
+              (Confidence ≥ 95% &amp; Rot ≤ 5%). Tidak perlu review manual.
+            </p>
+            <p className="text-xs text-gray-400 font-mono mt-1">{activeLotCode}</p>
+          </div>
+        ) : (
+          <div className={`rounded-xl border-2 p-5 flex flex-col items-center gap-2 ${GRADE_BG[grade] ?? 'bg-gray-50 border-gray-200'}`}>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Estimasi Grade</p>
+            <p className={`text-6xl font-black ${GRADE_COLORS[grade] ?? 'text-gray-900'}`}>{grade}</p>
+            <p className="text-xs text-gray-500 font-mono">{activeLotCode}</p>
+          </div>
+        )}
 
         {aggregate && (
           <div className="grid grid-cols-2 gap-3">
             <StatBox label="Total Terpindai" value={aggregate.total_objects_scanned} />
             <StatBox label="Pass" value={aggregate.pass_count} color="text-green-700" />
             <StatBox label="Fail" value={aggregate.fail_count} color="text-red-700" />
-            <StatBox label="Avg Confidence" value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`} />
-            <StatBox label="Avg Rot Level" value={`${aggregate.avg_rot_level.toFixed(1)}%`} />
+            <StatBox label="Avg Confidence" value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`}
+              color={aggregate.avg_confidence >= 0.95 ? 'text-green-700' : 'text-gray-900'} />
+            <StatBox label="Avg Rot Level" value={`${aggregate.avg_rot_level.toFixed(1)}%`}
+              color={aggregate.avg_rot_level <= 5 ? 'text-green-700' : aggregate.avg_rot_level > 40 ? 'text-red-700' : 'text-amber-700'} />
             <StatBox label="Avg Anomaly" value={aggregate.avg_anomaly_score.toFixed(3)} />
           </div>
         )}
@@ -194,10 +219,12 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
           </Card>
         )}
 
-        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
-          Lot <span className="font-mono font-semibold">{activeLotCode}</span> sudah dikirim ke antrian review Manager.
-          Anda akan mendapat notifikasi setelah keputusan dibuat.
-        </div>
+        {!autoApproved && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
+            Lot <span className="font-mono font-semibold">{activeLotCode}</span> sudah dikirim ke antrian review Manager.
+            Anda akan mendapat notifikasi setelah keputusan dibuat.
+          </div>
+        )}
 
         <Button onClick={startNew} className="w-full mt-1">
           Mulai Inspeksi Baru

@@ -1,34 +1,58 @@
 """
-Training script — AromAI QC Platform
-Dataset: Fresh and Rotten Fruit Detection (Adithya, Roboflow)
+Training script — AromVision QC Platform
+Dataset: Fresh and Rotten Fruit Detection (multi-source, Roboflow)
+
+Dataset yang digunakan (pilih salah satu atau combine):
+  OPSI A (default) — "fruit-freshness-detection" oleh keremberke (1 500+ gambar)
+    workspace : keremberke
+    project   : fruit-freshness-detection
+    version   : 1
+
+  OPSI B — "fresh-and-rotten-fruits" oleh adithya (dataset lama, 26 gambar)
+    workspace : adithya
+    project   : fresh-and-rotten-fruits
+    version   : 1
+
+  OPSI C — Dataset manual
+    Unduh dari https://universe.roboflow.com (cari "fruit freshness")
+    Ekstrak ke folder dataset/ sehingga ada dataset/data.yaml
 
 Langkah:
   1. pip install -r requirements.txt
-  2. python train.py  (akan download dataset otomatis jika ada API key)
+  2. python train.py
+  3. Salin models/best.pt ke Railway/Render untuk deployment
 
-Hasil training disimpan ke: runs/detect/aromai_fruit/weights/best.pt
-Kemudian di-copy ke: models/best.pt
+Deployment YOLO service (agar Inspection Mode bekerja di production):
+  → Deploy ke Railway: https://railway.app
+    - New Project → Deploy from GitHub
+    - Root directory: yolo_service/
+    - Start command: uvicorn main:app --host 0.0.0.0 --port 8000
+  → Set env var di Amplify: YOLO_SERVICE_URL=https://<railway-url>
+
+Hasil training: runs/detect/aromai_fruit_v2/weights/best.pt → models/best.pt
 """
 
 import shutil
 from pathlib import Path
 
 # -----------------------------------------------------------------------
-# Konfigurasi
+# Konfigurasi — ubah ke OPSI B atau C jika perlu
 # -----------------------------------------------------------------------
-ROBOFLOW_API_KEY = "s0SSpHSPTfSiVG04Iawp"           # Isi API key Roboflow Anda (gratis)
-ROBOFLOW_WORKSPACE = "adithya"
-ROBOFLOW_PROJECT = "fresh-and-rotten-fruits"
-ROBOFLOW_VERSION = 1            # Cek versi terbaru di halaman Roboflow
+ROBOFLOW_API_KEY = "s0SSpHSPTfSiVG04Iawp"
 
-EPOCHS = 100                    # 100 epoch untuk konvergensi yang lebih baik
-IMG_SIZE = 640                  # Ukuran input YOLO
-BATCH = 16                      # Kurangi jika VRAM kurang (8, 4)
-MODEL_BASE = "yolo11s.pt"       # yolo11s = lebih akurat dari nano, tetap ringan
-PROJECT_NAME = "aromai_fruit"
+# OPSI A — dataset lebih besar (rekomendasi)
+ROBOFLOW_WORKSPACE = "keremberke"
+ROBOFLOW_PROJECT   = "fruit-freshness-detection"
+ROBOFLOW_VERSION   = 1
+
+EPOCHS      = 100               # cukup untuk dataset sedang
+IMG_SIZE    = 640
+BATCH       = 16                # kurangi ke 8 jika VRAM < 6GB
+MODEL_BASE  = "yolo11s.pt"      # lebih akurat dari nano, masih ringan
+PROJECT_NAME = "aromai_fruit_v2"
 
 DATASET_DIR = Path("dataset")
-MODEL_OUT = Path("models/best.pt")
+MODEL_OUT   = Path("models/best.pt")
 # -----------------------------------------------------------------------
 
 

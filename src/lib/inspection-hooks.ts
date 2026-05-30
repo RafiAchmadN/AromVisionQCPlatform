@@ -121,12 +121,6 @@ export async function completeSession(
     .select()
     .single();
 
-  // Transition lot to MANAGER_REVIEW
-  await supabaseAdmin
-    .from('lots')
-    .update({ status: 'MANAGER_REVIEW', status_changed_at: new Date().toISOString() })
-    .eq('id', lot_id);
-
   await writeAuditLog({
     action_type: 'SESSION_COMPLETED',
     target_type: 'inspection_sessions',
@@ -134,27 +128,88 @@ export async function completeSession(
     value_after: { lot_id, end_reason, grade, total_objects_scanned: total },
   });
 
-  // Notify operator
+  // ── Auto-approval check ────────────────────────────────────────────────────
+  // Batch prima: confidence >= 95% DAN avg rot <= 5% → langsung APPROVED, skip antrian manajer
+  const AUTO_APPROVE_CONFIDENCE = 0.95;
+  const AUTO_APPROVE_MAX_ROT    = 5.0;
+  const isAutoApprove = avgConfidence >= AUTO_APPROVE_CONFIDENCE && avgRot <= AUTO_APPROVE_MAX_ROT;
+
+  if (isAutoApprove && report) {
+    // Buat decision record otomatis
+    await supabaseAdmin.from('decisions').insert({
+      lot_id,
+      inspection_report_id: report.id,
+      decision: 'APPROVED',
+      is_system_decision: true,
+      rules_evaluated: [
+        { rule: 'avg_confidence >= 0.95', passed: true, expected: '>=0.95', actual: avgConfidence.toFixed(3) },
+        { rule: 'avg_rot_level <= 5.0',   passed: true, expected: '<=5.0',  actual: avgRot.toFixed(1) },
+      ],
+    });
+
+    // Langsung APPROVED — tidak perlu mampir ke antrian manajer
+    await supabaseAdmin
+      .from('lots')
+      .update({ status: 'APPROVED', status_changed_at: new Date().toISOString() })
+      .eq('id', lot_id);
+
+    await writeAuditLog({
+      action_type: 'LOT_AUTO_APPROVED',
+      target_type: 'lots',
+      target_id: lot_id,
+      value_after: { avg_confidence: avgConfidence, avg_rot_level: avgRot, grade },
+    });
+
+    // Notif operator — batch langsung lolos
+    await dispatchNotification({
+      user_id: operator_id,
+      type: 'LOT_APPROVED',
+      title: 'Batch Auto-Approved',
+      message: `Batch lolos kriteria kualitas prima (Confidence: ${(avgConfidence * 100).toFixed(1)}%, Rot: ${avgRot.toFixed(1)}%). Disetujui otomatis — tidak perlu review manual.`,
+      reference_type: 'lots',
+      reference_id: lot_id,
+    });
+
+    // Notif manajer — informatif saja
+    const managerIds = await getManagerIds();
+    await dispatchNotificationToMany(managerIds, {
+      type: 'LOT_APPROVED',
+      title: 'Sistem: Lot Disetujui Otomatis',
+      message: `Lot dengan grade ${grade} (Confidence: ${(avgConfidence * 100).toFixed(1)}%, Rot: ${avgRot.toFixed(1)}%) memenuhi threshold prima dan disetujui sistem. Tidak perlu tindakan.`,
+      reference_type: 'lots',
+      reference_id: lot_id,
+    });
+
+    return; // selesai — tidak masuk antrian manajer
+  }
+
+  // ── Normal path: kirim ke antrian manajer ─────────────────────────────────
+  await supabaseAdmin
+    .from('lots')
+    .update({ status: 'MANAGER_REVIEW', status_changed_at: new Date().toISOString() })
+    .eq('id', lot_id);
+
+  // Notif operator
   await dispatchNotification({
     user_id: operator_id,
     type: 'SESSION_COMPLETE',
     title: 'Sesi Inspeksi Selesai',
-    message: `Inspeksi lot selesai dengan grade ${grade}. Total ${total} objek terpindai.`,
+    message: `Inspeksi lot selesai dengan grade ${grade}. Total ${total} objek terpindai. Menunggu keputusan manajer.`,
     reference_type: 'lots',
     reference_id: lot_id,
   });
 
-  // Notify all managers
+  // Notif semua manajer
   const managerIds = await getManagerIds();
   await dispatchNotificationToMany(managerIds, {
     type: 'LOT_READY_FOR_REVIEW',
     title: 'Lot Siap Direview',
-    message: `Lot baru menunggu keputusan. Grade sementara: ${grade}. Confidence: ${(avgConfidence * 100).toFixed(1)}%.`,
+    message: `Lot baru menunggu keputusan. Grade: ${grade} | Confidence: ${(avgConfidence * 100).toFixed(1)}% | Rot: ${avgRot.toFixed(1)}%.`,
     reference_type: 'lots',
     reference_id: lot_id,
   });
 
-  // Critical alert if needed
+  // Alert kritis
   if (avgRot > 60 || avgAnomaly > 0.8) {
     await dispatchNotificationToMany(managerIds, {
       type: 'CRITICAL_QUALITY_ALERT',
