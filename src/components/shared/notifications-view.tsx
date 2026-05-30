@@ -34,7 +34,11 @@ export function NotificationsView() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchNotifs(); }, []);
+  useEffect(() => {
+    fetchNotifs();
+    const id = setInterval(fetchNotifs, 10_000);
+    return () => clearInterval(id);
+  }, []);
 
   async function fetchNotifs() {
     setLoading(true);

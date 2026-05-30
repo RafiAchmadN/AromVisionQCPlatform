@@ -5,6 +5,7 @@ import { getServerSession } from '@/lib/auth';
 import { makeApiError, getClientIp } from '@/lib/utils';
 import { writeAuditLog } from '@/lib/audit';
 import { isValidTransition } from '@/lib/state-machine';
+import { dispatchNotification } from '@/lib/notifications';
 import type { LotStatus } from '@/lib/types';
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -96,6 +97,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     value_after: updates,
     ip_address: getClientIp(request),
   });
+
+  // Notify all active managers when lot enters review queue
+  if (parsed.data.status === 'MANAGER_REVIEW') {
+    const { data: managers } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('role', 'Manager')
+      .eq('status', 'ACTIVE');
+
+    for (const manager of managers ?? []) {
+      await dispatchNotification({
+        user_id: manager.id,
+        type: 'LOT_READY_FOR_REVIEW',
+        title: 'Lot Siap Direview',
+        message: `Lot "${currentLot.batch_name}" (${currentLot.product_type}) menunggu keputusan QC Anda.`,
+        reference_type: 'lots',
+        reference_id: id,
+      });
+    }
+  }
 
   return Response.json(updated);
 }

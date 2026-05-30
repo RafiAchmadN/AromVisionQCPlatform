@@ -20,7 +20,7 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
   useEffect(() => {
     fetchMetrics();
     fetchLots();
-    const id = setInterval(() => { fetchMetrics(); fetchLots(); }, 30_000);
+    const id = setInterval(() => { fetchMetrics(); fetchLots(); }, 8_000);
     return () => clearInterval(id);
   }, []);
 
