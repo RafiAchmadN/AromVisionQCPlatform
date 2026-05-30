@@ -126,10 +126,12 @@ export function AdminUsersModule() {
                 <TableCell className="text-xs">{new Date(u.created_at).toLocaleDateString('id-ID')}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    {u.status === 'ACTIVE' || u.status === 'PENDING_ACTIVATION' ? (
+                    {u.status === 'ACTIVE' ? (
                       <Button size="sm" variant="destructive" onClick={() => deactivate(u.id)} className="text-xs h-7 px-2">Nonaktifkan</Button>
                     ) : (
-                      <Button size="sm" variant="default" onClick={() => activate(u.id)} className="text-xs h-7 px-2">Aktifkan</Button>
+                      <Button size="sm" variant="default" onClick={() => activate(u.id)} className="text-xs h-7 px-2">
+                        {u.status === 'PENDING_ACTIVATION' ? 'Aktivasi' : 'Aktifkan'}
+                      </Button>
                     )}
                   </div>
                 </TableCell>

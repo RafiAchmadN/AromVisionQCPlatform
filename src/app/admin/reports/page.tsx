@@ -1,16 +1,136 @@
-import { redirect } from 'next/navigation';
-import { getServerSession } from '@/lib/auth';
-import { Topbar } from '@/components/shared/topbar';
+'use client';
+import { useState } from 'react';
 import { AdminSidebar } from '@/components/admin/sidebar';
 
-export default async function AdminReportsPage() {
-  const user = await getServerSession();
-  if (!user) redirect('/login');
-  if (user.role !== 'Admin') redirect('/login');
+type Period = 'daily' | 'weekly' | 'monthly';
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: 'daily', label: 'Harian' },
+  { key: 'weekly', label: 'Mingguan' },
+  { key: 'monthly', label: 'Bulanan' },
+];
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function ReportPanel({ period }: { period: Period }) {
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`/api/reports/${period}`);
+      if (!res.ok) { setError('Gagal memuat laporan'); return; }
+      setData(await res.json());
+      setLoaded(true);
+    } catch {
+      setError('Gagal memuat laporan');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const label = period === 'daily' ? 'Harian' : period === 'weekly' ? 'Mingguan' : 'Bulanan';
+
+  if (!loaded) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-6 flex flex-col items-center gap-3">
+        <p className="text-sm font-semibold text-gray-700">Laporan {label}</p>
+        <p className="text-xs text-gray-500 text-center">
+          {period === 'daily' ? 'Data lot dan inspeksi hari ini' : period === 'weekly' ? 'Ringkasan 7 hari terakhir' : 'Ringkasan 30 hari terakhir'}
+        </p>
+        <button
+          onClick={load}
+          disabled={loading}
+          type="button"
+          className="mt-1 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        >
+          {loading ? 'Memuat...' : 'Tampilkan Laporan'}
+        </button>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const total = data.total_lots as number ?? 0;
 
   return (
+    <div className="rounded-lg border border-gray-200 bg-white p-6 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-gray-800">Laporan {label}</p>
+        <button type="button" onClick={() => setLoaded(false)} className="text-xs text-gray-400 hover:text-gray-600">Tutup</button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Lot" value={total} />
+        {data.approved !== undefined && <StatCard label="Disetujui" value={data.approved as number} />}
+        {data.rejected !== undefined && <StatCard label="Ditolak" value={data.rejected as number} />}
+        {data.quarantined !== undefined && <StatCard label="Karantina" value={data.quarantined as number} />}
+        {data.rejection_rate !== undefined && <StatCard label="Tingkat Penolakan" value={`${data.rejection_rate}%`} />}
+        {data.avg_confidence !== undefined && <StatCard label="Rata-rata Confidence" value={`${(Number(data.avg_confidence) * 100).toFixed(1)}%`} />}
+        {data.avg_rot_level !== undefined && <StatCard label="Rata-rata Rot Level" value={`${data.avg_rot_level}%`} />}
+        {data.avg_duration_min !== undefined && <StatCard label="Rata-rata Durasi" value={`${data.avg_duration_min} mnt`} />}
+      </div>
+
+      {data.breakdown_by_product && Object.keys(data.breakdown_by_product as object).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-600 mb-2">Per Produk</p>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(data.breakdown_by_product as Record<string, number>).map(([k, v]) => (
+              <div key={k} className="rounded border border-gray-100 bg-gray-50 px-3 py-2 flex justify-between">
+                <span className="text-xs text-gray-700">{k}</span>
+                <span className="text-xs font-semibold text-gray-900">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.grade_distribution && Object.keys(data.grade_distribution as object).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-600 mb-2">Distribusi Grade</p>
+          <div className="grid grid-cols-4 gap-2">
+            {Object.entries(data.grade_distribution as Record<string, number>).map(([k, v]) => (
+              <div key={k} className="rounded border border-gray-100 bg-gray-50 px-3 py-2 flex justify-between">
+                <span className="text-xs text-gray-700">Grade {k}</span>
+                <span className="text-xs font-semibold text-gray-900">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.shift_breakdown && Object.keys(data.shift_breakdown as object).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-600 mb-2">Per Shift</p>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(data.shift_breakdown as Record<string, number>).map(([k, v]) => (
+              <div key={k} className="rounded border border-gray-100 bg-gray-50 px-3 py-2 flex justify-between">
+                <span className="text-xs text-gray-700">{k}</span>
+                <span className="text-xs font-semibold text-gray-900">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AdminReportsPage() {
+  return (
     <div className="flex flex-col h-screen">
-      <Topbar user={user} />
       <div className="flex flex-1 overflow-hidden">
         <AdminSidebar />
         <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
@@ -25,16 +145,9 @@ export default async function AdminReportsPage() {
                 Ekspor CSV
               </a>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              {(['daily', 'weekly', 'monthly'] as const).map((period) => (
-                <a
-                  key={period}
-                  href={`/api/reports/${period}`}
-                  className="block rounded-lg border border-gray-200 bg-white p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <p className="text-sm font-semibold text-gray-800 capitalize">{period === 'daily' ? 'Harian' : period === 'weekly' ? 'Mingguan' : 'Bulanan'}</p>
-                  <p className="text-xs text-gray-500 mt-1">Klik untuk melihat laporan {period === 'daily' ? 'harian' : period === 'weekly' ? 'mingguan' : 'bulanan'}</p>
-                </a>
+            <div className="flex flex-col gap-4">
+              {PERIODS.map(({ key }) => (
+                <ReportPanel key={key} period={key} />
               ))}
             </div>
           </div>
