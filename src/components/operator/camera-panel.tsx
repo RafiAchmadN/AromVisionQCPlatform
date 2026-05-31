@@ -179,7 +179,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   const saveFrame = useCallback(async (det: Detection) => {
     if (!activeSession) return;
     try {
-      await fetch('/api/inspection/frames', {
+      const res = await fetch('/api/inspection/frames', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -198,7 +198,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           bbox_coordinates: { x: det.bbox.x, y: det.bbox.y, width: det.bbox.w, height: det.bbox.h },
         }),
       });
-      setSavedCount((c) => c + 1);
+      if (res.ok) setSavedCount((c) => c + 1);
     } catch {
       // non-blocking – never interrupt detection loop
     }

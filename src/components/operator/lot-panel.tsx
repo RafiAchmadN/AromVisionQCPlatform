@@ -153,17 +153,26 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
     });
   }
 
-  // Poll live aggregate when session is active
+  // Poll live aggregate when session is active — auto-detect server-side completion
   useEffect(() => {
     if (!activeLotId || !sessionActive) return;
     const fetchAgg = async () => {
       const res = await fetch(`/api/inspection/live/${activeLotId}`);
-      if (res.ok) setAggregate(await res.json());
+      if (!res.ok) return;
+      const data = await res.json();
+      setAggregate(data);
+      if (data.session_completed) {
+        // Server auto-completed the session (UNIT_COUNT_REACHED)
+        setSessionActive(false);
+        setSessionDone(true);
+        setAutoApproved(false);
+        onSessionEnd?.();
+      }
     };
     fetchAgg();
     const id = setInterval(fetchAgg, 3000);
     return () => clearInterval(id);
-  }, [activeLotId, sessionActive]);
+  }, [activeLotId, sessionActive, onSessionEnd]);
 
   // ─── COMPLETION STATE ───────────────────────────────────────
   if (sessionDone) {
