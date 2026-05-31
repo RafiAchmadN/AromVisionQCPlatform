@@ -33,7 +33,7 @@ export async function GET() {
   }
 
   const n   = reports?.length ?? 0;
-  const avg = (key: string) => n ? reports!.reduce((s, r) => s + ((r as Record<string, number>)[key] ?? 0), 0) / n : 0;
+  const avg = (key: string) => n ? reports!.reduce((s, r) => s + ((r as unknown as Record<string, number>)[key] ?? 0), 0) / n : 0;
 
   return Response.json({
     period: 'weekly', from,
