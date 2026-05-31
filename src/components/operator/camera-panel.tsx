@@ -126,6 +126,9 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     color_category: 'Normal', defect_count: 0,
     defect_severity: 'Minor', confidence: 0,
   });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [yoloError, setYoloError]       = useState<string | null>(null);
+  const consecutiveEmptyRef = useRef(0);
 
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
@@ -172,6 +175,9 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
     setCameraOn(false);
     setDetections([]);
+    setIsProcessing(false);
+    setYoloError(null);
+    consecutiveEmptyRef.current = 0;
     pendingRef.current = false;
   }, []);
 
@@ -217,14 +223,20 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       const b64 = captureFrame(video);
       if (!b64) return;
       pendingRef.current = true;
+      setIsProcessing(true);
       try {
         const res = await fetch('/api/yolo/detect', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ image_b64: b64, conf: 0.45 }),
+          body:    JSON.stringify({ image_b64: b64, conf: 0.20 }),
         });
-        if (!res.ok) throw new Error();
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          setYoloError(`YOLO error ${res.status}: ${errData.error ?? res.statusText}`);
+          return;
+        }
         const data = await res.json();
+        setYoloError(null);
         const dets: Detection[] = (data.detections ?? []).map((d: Detection & { color_rgb?: { r: number; g: number; b: number }; color_deviation?: number; defect_types?: string[] }) => ({
           ...d,
           color_rgb:       d.color_rgb       ?? colorRgbFromCategory(d.color_category),
@@ -233,13 +245,20 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         }));
         setInferenceMs(data.inference_ms ?? null);
         setDetections(dets);
-        updateIndicators(dets);
-        drawOverlay(dets, canvas, data.frame_w ?? canvas.width, data.frame_h ?? canvas.height);
-        for (const det of dets) saveFrame(det).catch(() => {});
-      } catch {
-        setError('Gagal menghubungi YOLO service. Cek koneksi.');
+        if (dets.length > 0) {
+          consecutiveEmptyRef.current = 0;
+          updateIndicators(dets);
+          drawOverlay(dets, canvas, data.frame_w ?? canvas.width, data.frame_h ?? canvas.height);
+          for (const det of dets) saveFrame(det).catch(() => {});
+        } else {
+          consecutiveEmptyRef.current += 1;
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setYoloError(`Gagal menghubungi YOLO service: ${msg}`);
       } finally {
         pendingRef.current = false;
+        setIsProcessing(false);
       }
     } else {
       // Simulation mode — always mock regardless of YOLO status
@@ -385,9 +404,29 @@ export function OperatorCameraPanel({ activeSession }: Props) {
             }
           </div>
         )}
-        {cameraOn && inferenceMs !== null && mode === 'inspection' && (
-          <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded font-mono">
-            {inferenceMs.toFixed(0)} ms
+        {cameraOn && mode === 'inspection' && (
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+            {isProcessing && (
+              <div className="flex items-center gap-1.5 bg-black/60 text-white text-xs px-2 py-1 rounded font-mono">
+                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                Mendeteksi...
+              </div>
+            )}
+            {!isProcessing && inferenceMs !== null && (
+              <div className="bg-black/50 text-green-400 text-xs px-2 py-1 rounded font-mono">
+                {inferenceMs.toFixed(0)} ms
+              </div>
+            )}
+            {yoloError && (
+              <div className="bg-red-900/80 text-red-200 text-[10px] px-2 py-1 rounded max-w-[200px] text-right leading-tight">
+                {yoloError}
+              </div>
+            )}
+            {!isProcessing && !yoloError && consecutiveEmptyRef.current >= 3 && (
+              <div className="bg-black/60 text-yellow-300 text-[10px] px-2 py-1 rounded max-w-[180px] text-right leading-tight">
+                Tidak ada deteksi — arahkan buah lebih dekat ke kamera
+              </div>
+            )}
           </div>
         )}
         {cameraOn && (
