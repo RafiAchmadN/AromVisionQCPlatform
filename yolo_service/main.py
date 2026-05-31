@@ -192,6 +192,24 @@ async def health():
     }
 
 
+@app.get("/test-detect")
+async def test_detect():
+    """Diagnosa: jalankan inference pada gambar sintetis 100x100 merah."""
+    if model is None:
+        return {"ok": False, "error": "model not loaded"}
+    try:
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+        img[:] = (40, 40, 180)  # BGR merah
+        t0 = time.perf_counter()
+        results = model.predict(img, conf=0.05, verbose=False)
+        ms = (time.perf_counter() - t0) * 1000
+        n = sum(len(r.boxes) for r in results)
+        return {"ok": True, "inference_ms": round(ms, 1), "detections": n}
+    except Exception as exc:
+        import traceback
+        return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
+
+
 @app.get("/classes")
 async def get_classes():
     if model is None:
@@ -218,21 +236,36 @@ async def detect(req: DetectRequest):
         raise HTTPException(400, "Gambar tidak valid atau kosong.")
 
     h, w = img.shape[:2]
-    t0   = time.perf_counter()
+    print(f"[YOLO] Running predict on {w}x{h} image, conf={req.conf}", flush=True)
+    t0 = time.perf_counter()
 
-    results = model.predict(img, conf=req.conf, verbose=False)
+    try:
+        results = model.predict(img, conf=req.conf, verbose=False)
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[YOLO] predict() failed:\n{tb}", flush=True)
+        raise HTTPException(500, detail=f"Inference gagal: {type(exc).__name__}: {exc}") from exc
 
     inference_ms = (time.perf_counter() - t0) * 1000
+    print(f"[YOLO] Inference done in {inference_ms:.1f}ms", flush=True)
 
     detections: list[Detection] = []
-    for result in results:
-        for box in result.boxes:
-            cls_idx  = int(box.cls[0])
-            cls_name = model.names[cls_idx]
-            conf_val = float(box.conf[0])
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            detections.append(_build_detection(cls_name, conf_val, x1, y1, x2, y2))
+    try:
+        for result in results:
+            for box in result.boxes:
+                cls_idx  = int(box.cls[0])
+                cls_name = model.names[cls_idx]
+                conf_val = float(box.conf[0])
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                detections.append(_build_detection(cls_name, conf_val, x1, y1, x2, y2))
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[YOLO] result parsing failed:\n{tb}", flush=True)
+        raise HTTPException(500, detail=f"Gagal memproses hasil: {type(exc).__name__}: {exc}") from exc
 
+    print(f"[YOLO] {len(detections)} detections", flush=True)
     return DetectResponse(
         detections=  detections,
         model_loaded=True,
