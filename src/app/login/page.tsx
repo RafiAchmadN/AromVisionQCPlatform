@@ -211,68 +211,70 @@ export default function LoginPage() {
       <div
         className="min-h-screen flex relative overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #020906 0%, #051208 20%, #0a1f0c 40%, #071510 60%, #030a05 80%, #020906 100%)',
-          backgroundSize: '400% 400%',
-          animation: 'gradientShift 15s ease infinite',
+          background: 'linear-gradient(90deg, #122a16 0%, #051208 28%, #010503 50%, #051208 72%, #122a16 100%)',
         }}
       >
         <GradientOrbs />
 
         {/* ── LEFT PANEL ─────────────────────────────────────────────── */}
         <div className="hidden lg:flex w-1/2 flex-col items-center justify-center relative px-12 z-10">
-          <ParticleField />
 
           <div
             className="relative z-10 flex flex-col items-center gap-8 max-w-sm text-center"
             style={{ animation: mounted ? 'slideUp 0.7s 0.1s cubic-bezier(.22,1,.36,1) both' : 'none' }}
           >
-            {/* Logo with 3D spin on hover */}
-            <div
-              className="relative group cursor-default"
-              style={{ animation: 'orbFloat2 6s ease-in-out infinite' }}
-            >
+            {/* Logo + title section — particles confined here only */}
+            <div className="relative flex flex-col items-center gap-6 pb-2">
+              <ParticleField />
+
+              {/* Logo with 3D spin on hover */}
               <div
-                className="absolute inset-0 rounded-full opacity-40 blur-xl scale-150"
-                style={{ background: 'radial-gradient(circle, #4e9955, transparent)' }}
-              />
-              <Image
-                src="/logo.svg"
-                alt="AromVision Logo"
-                width={110}
-                height={121}
-                unoptimized
-                priority
-                className="relative drop-shadow-[0_0_24px_rgba(114,194,120,0.6)] group-hover:scale-110 transition-transform duration-500"
-              />
+                className="relative z-10 group cursor-default"
+                style={{ animation: 'orbFloat2 6s ease-in-out infinite' }}
+              >
+                <div
+                  className="absolute inset-0 rounded-full opacity-40 blur-xl scale-150"
+                  style={{ background: 'radial-gradient(circle, #4e9955, transparent)' }}
+                />
+                <Image
+                  src="/logo.svg"
+                  alt="AromVision Logo"
+                  width={110}
+                  height={121}
+                  unoptimized
+                  priority
+                  className="relative drop-shadow-[0_0_24px_rgba(114,194,120,0.6)] group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+
+              {/* Brand name with gradient text */}
+              <div className="relative z-10">
+                <h1
+                  className="text-5xl font-black tracking-tight"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, #a8d8ab 40%, #72c278 70%, #4e9955 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    textShadow: 'none',
+                  }}
+                >
+                  AromVision
+                </h1>
+                <p
+                  className="text-brand-500 text-sm mt-2 font-medium tracking-wide"
+                  style={{ animation: 'fadeIn 1s 0.8s both' }}
+                >
+                  AI Quality Control Platform
+                </p>
+                <div
+                  className="h-px mt-3 mx-auto w-24 rounded-full"
+                  style={{ background: 'linear-gradient(90deg, transparent, #72c278, transparent)' }}
+                />
+              </div>
             </div>
 
-            {/* Brand name with gradient text */}
-            <div>
-              <h1
-                className="text-5xl font-black tracking-tight"
-                style={{
-                  background: 'linear-gradient(135deg, #ffffff 0%, #a8d8ab 40%, #72c278 70%, #4e9955 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  textShadow: 'none',
-                }}
-              >
-                AromVision
-              </h1>
-              <p
-                className="text-brand-500 text-sm mt-2 font-medium tracking-wide"
-                style={{ animation: 'fadeIn 1s 0.8s both' }}
-              >
-                AI Quality Control Platform
-              </p>
-              <div
-                className="h-px mt-3 mx-auto w-24 rounded-full"
-                style={{ background: 'linear-gradient(90deg, transparent, #72c278, transparent)' }}
-              />
-            </div>
-
-            {/* Feature list */}
+            {/* Feature list — no particles here */}
             <div className="w-full flex flex-col gap-3">
               {[
                 { label: 'Realtime detection',  sub: 'Rot level · Defect count · Anomaly score' },
