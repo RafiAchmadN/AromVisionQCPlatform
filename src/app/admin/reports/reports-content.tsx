@@ -139,9 +139,11 @@ export function AdminReportsContent() {
           Ekspor CSV
         </a>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-row gap-4 items-start">
         {PERIODS.map(({ key }) => (
-          <ReportPanel key={key} period={key} />
+          <div key={key} className="flex-1 min-w-0">
+            <ReportPanel period={key} />
+          </div>
         ))}
       </div>
     </div>
