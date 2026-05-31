@@ -168,6 +168,8 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     streamRef.current = null;
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     if (videoRef.current)    videoRef.current.srcObject = null;
+    const canvas = canvasRef.current;
+    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
     setCameraOn(false);
     setDetections([]);
     pendingRef.current = false;
@@ -353,14 +355,14 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           <div className="flex rounded-md border border-brand-200 overflow-hidden text-xs font-semibold">
             <button
               type="button"
-              onClick={() => { setMode('simulation'); if (cameraOn) stopCamera(); }}
+              onClick={() => { setMode('simulation'); if (cameraOn) stopCamera(); else { const c = canvasRef.current; c?.getContext('2d')?.clearRect(0,0,c.width,c.height); } setDetections([]); }}
               className={`px-2.5 py-1 transition-colors ${mode === 'simulation' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}
             >
               Simulasi
             </button>
             <button
               type="button"
-              onClick={() => { setMode('inspection'); if (cameraOn) stopCamera(); }}
+              onClick={() => { setMode('inspection'); if (cameraOn) stopCamera(); else { const c = canvasRef.current; c?.getContext('2d')?.clearRect(0,0,c.width,c.height); } setDetections([]); }}
               className={`px-2.5 py-1 transition-colors ${mode === 'inspection' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}
             >
               Inspeksi
