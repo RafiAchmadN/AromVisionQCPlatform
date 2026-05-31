@@ -196,9 +196,9 @@ export function AdminOverview() {
     : [];
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-5">
       {/* Header */}
-      <div className="animate-fade-up shrink-0">
+      <div className="animate-fade-up">
         <div className="flex items-center gap-3">
           <div className="h-6 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
           <h1 className="text-xl font-bold text-gray-900">Overview Sistem</h1>
@@ -206,82 +206,31 @@ export function AdminOverview() {
         <p className="text-xs text-gray-400 mt-0.5 ml-4">Update otomatis setiap 15 detik</p>
       </div>
 
-      {/* Two-panel layout */}
-      <div className="flex gap-4 flex-1 min-h-0">
-
-        {/* ── LEFT PANEL: Aktivitas Terkini ── */}
-        <div className="w-[55%] flex flex-col min-h-0">
-          <Card className="flex-1 flex flex-col overflow-hidden animate-fade-up">
-            <CardHeader className="shrink-0 pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <span className="h-3 w-1 rounded-full bg-brand-500 inline-block" />
-                Aktivitas Terkini
-              </CardTitle>
-            </CardHeader>
-            <div className="flex-1 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Waktu</TableHead>
-                    <TableHead>Jenis Aksi</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Pelaku</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activities.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-xs whitespace-nowrap">
-                        {new Date(a.created_at).toLocaleString('id-ID')}
-                      </TableCell>
-                      <TableCell className="text-xs font-mono">{a.action_type}</TableCell>
-                      <TableCell className="text-xs">{a.target_type} / {a.target_id.slice(0, 8)}</TableCell>
-                      <TableCell className="text-xs">
-                        {(a.actor as { name?: string } | null)?.name ?? 'SYSTEM'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={a.status === 'SUCCESS' ? 'success' : 'destructive'} className="text-xs">
-                          {a.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {activities.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">Tidak ada aktivitas</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+      {/* Metric cards */}
+      {metrics ? (
+        <div className="grid grid-cols-4 gap-3">
+          {summaryCards.map((c, i) => (
+            <div key={c.label} className={`animate-fade-up delay-${[50,100,150,200,250,300,400,500][i] ?? 100}`}>
+              <MetricCard {...c} />
             </div>
-          </Card>
+          ))}
         </div>
-
-        {/* ── RIGHT PANEL: Stats + Charts ── */}
-        <div className="w-[45%] flex flex-col gap-4 overflow-y-auto">
-
-          {/* Metric cards — 2 col grid */}
-          {metrics ? (
-            <div className="grid grid-cols-2 gap-3 animate-fade-up shrink-0">
-              {summaryCards.map((c, i) => (
-                <div key={c.label} className={`animate-fade-up delay-${[50,100,150,200,250,300,400,500][i] ?? 100}`}>
-                  <MetricCard {...c} />
-                </div>
-              ))}
+      ) : (
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl bg-white p-3.5 border border-[#c8d4c8] animate-pulse" style={{ borderTop: '3px solid #e4e9e3' }}>
+              <div className="h-2.5 shimmer rounded w-3/4 mb-3"/>
+              <div className="h-7 shimmer rounded w-1/2"/>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 shrink-0">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="rounded-xl bg-white p-3.5 border border-[#c8d4c8] animate-pulse" style={{ borderTop: '3px solid #e4e9e3' }}>
-                  <div className="h-2.5 shimmer rounded w-3/4 mb-3"/>
-                  <div className="h-7 shimmer rounded w-1/2"/>
-                </div>
-              ))}
-            </div>
-          )}
+          ))}
+        </div>
+      )}
 
-          {/* Distribusi Grade */}
-          {metrics?.grade_distribution && (
-            <Card className="animate-fade-up delay-300 shrink-0">
+      {/* Charts row — side by side */}
+      {metrics && (metrics.grade_distribution || metrics.daily_trend) && (
+        <div className="grid grid-cols-2 gap-4 animate-fade-up delay-300">
+          {metrics.grade_distribution && (
+            <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center justify-between">
                   Distribusi Grade
@@ -293,10 +242,8 @@ export function AdminOverview() {
               </CardContent>
             </Card>
           )}
-
-          {/* Tren Inspeksi */}
-          {metrics?.daily_trend && (
-            <Card className="animate-fade-up delay-400 shrink-0">
+          {metrics.daily_trend && (
+            <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center justify-between">
                   Tren Inspeksi
@@ -318,9 +265,51 @@ export function AdminOverview() {
               </CardContent>
             </Card>
           )}
-
         </div>
-      </div>
+      )}
+
+      {/* Aktivitas Terkini — full width di bawah */}
+      <Card className="animate-fade-up delay-400">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <span className="h-3 w-1 rounded-full bg-brand-500 inline-block" />
+            Aktivitas Terkini
+          </CardTitle>
+        </CardHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Waktu</TableHead>
+              <TableHead>Jenis Aksi</TableHead>
+              <TableHead>Target</TableHead>
+              <TableHead>Pelaku</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activities.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="text-xs whitespace-nowrap">
+                  {new Date(a.created_at).toLocaleString('id-ID')}
+                </TableCell>
+                <TableCell className="text-xs font-mono">{a.action_type}</TableCell>
+                <TableCell className="text-xs">{a.target_type} / {a.target_id.slice(0, 8)}</TableCell>
+                <TableCell className="text-xs">
+                  {(a.actor as { name?: string } | null)?.name ?? 'SYSTEM'}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={a.status === 'SUCCESS' ? 'success' : 'destructive'} className="text-xs">
+                    {a.status}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+            {activities.length === 0 && (
+              <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">Tidak ada aktivitas</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }
