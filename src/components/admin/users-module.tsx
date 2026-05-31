@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useLanguage } from '@/contexts/language-context';
 import type { User } from '@/lib/types';
 
 const TABS = ['Operator', 'Manager', 'Shift'] as const;
@@ -15,6 +16,7 @@ const ROLE_OPTIONS = [{ value: 'Operator', label: 'Operator' }, { value: 'Manage
 const SHIFT_OPTIONS = [{ value: 'Pagi', label: 'Pagi' }, { value: 'Siang', label: 'Siang' }, { value: 'Malam', label: 'Malam' }];
 
 export function AdminUsersModule() {
+  const { t, lang } = useLanguage();
   const [tab, setTab] = useState<Tab>('Operator');
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -58,8 +60,8 @@ export function AdminUsersModule() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Manajemen Pengguna</h1>
-        <Button size="sm" onClick={() => setShowForm(true)}>+ Tambah User</Button>
+        <h1 className="text-xl font-bold text-gray-900">{lang === 'en' ? 'User Management' : 'Manajemen Pengguna'}</h1>
+        <Button size="sm" onClick={() => setShowForm(true)}>{lang === 'en' ? '+ Add User' : '+ Tambah User'}</Button>
       </div>
 
       {/* Tabs */}
@@ -81,18 +83,18 @@ export function AdminUsersModule() {
 
       {showForm && (
         <Card>
-          <CardHeader><CardTitle className="text-sm">Tambah User Baru</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">{lang === 'en' ? 'Add New User' : 'Tambah User Baru'}</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Nama" value={form.name} onChange={(e) => setForm(p => ({...p, name: e.target.value}))} required />
-              <Input label="Email" type="email" value={form.email} onChange={(e) => setForm(p => ({...p, email: e.target.value}))} required />
+              <Input label={t('common.name')} value={form.name} onChange={(e) => setForm(p => ({...p, name: e.target.value}))} required />
+              <Input label={t('common.email')} type="email" value={form.email} onChange={(e) => setForm(p => ({...p, email: e.target.value}))} required />
               <Input label="Password" type="password" value={form.password} onChange={(e) => setForm(p => ({...p, password: e.target.value}))} required />
-              <Select label="Role" options={ROLE_OPTIONS} value={form.role} onChange={(e) => setForm(p => ({...p, role: e.target.value}))} />
-              <Select label="Shift" options={SHIFT_OPTIONS} value={form.shift} onChange={(e) => setForm(p => ({...p, shift: e.target.value}))} placeholder="Pilih shift..." />
+              <Select label={t('common.role')} options={ROLE_OPTIONS} value={form.role} onChange={(e) => setForm(p => ({...p, role: e.target.value}))} />
+              <Select label={t('lot.shift')} options={SHIFT_OPTIONS} value={form.shift} onChange={(e) => setForm(p => ({...p, shift: e.target.value}))} placeholder={lang === 'en' ? 'Select shift...' : 'Pilih shift...'} />
             </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={createUser} loading={saving}>Simpan</Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Batal</Button>
+              <Button size="sm" onClick={createUser} loading={saving}>{t('common.save')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>{t('common.cancel')}</Button>
             </div>
           </CardContent>
         </Card>
@@ -102,13 +104,13 @@ export function AdminUsersModule() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nama</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Shift</TableHead>
-              <TableHead>Bergabung</TableHead>
-              <TableHead>Aksi</TableHead>
+              <TableHead>{t('common.name')}</TableHead>
+              <TableHead>{t('common.email')}</TableHead>
+              <TableHead>{t('common.role')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
+              <TableHead>{t('lot.shift')}</TableHead>
+              <TableHead>{lang === 'en' ? 'Joined' : 'Bergabung'}</TableHead>
+              <TableHead>{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -127,10 +129,10 @@ export function AdminUsersModule() {
                 <TableCell>
                   <div className="flex gap-1">
                     {u.status === 'ACTIVE' ? (
-                      <Button size="sm" variant="destructive" onClick={() => deactivate(u.id)} className="text-xs h-7 px-2">Nonaktifkan</Button>
+                      <Button size="sm" variant="destructive" onClick={() => deactivate(u.id)} className="text-xs h-7 px-2">{lang === 'en' ? 'Deactivate' : 'Nonaktifkan'}</Button>
                     ) : (
                       <Button size="sm" variant="default" onClick={() => activate(u.id)} className="text-xs h-7 px-2">
-                        {u.status === 'PENDING_ACTIVATION' ? 'Aktivasi' : 'Aktifkan'}
+                        {u.status === 'PENDING_ACTIVATION' ? (lang === 'en' ? 'Activate' : 'Aktivasi') : (lang === 'en' ? 'Enable' : 'Aktifkan')}
                       </Button>
                     )}
                   </div>
@@ -138,7 +140,7 @@ export function AdminUsersModule() {
               </TableRow>
             ))}
             {users.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">Tidak ada data</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">{t('common.noData')}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

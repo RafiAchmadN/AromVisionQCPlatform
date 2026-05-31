@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useLanguage } from '@/contexts/language-context';
 import type { Lot } from '@/lib/types';
 
 const TABS = ['Semua Lot', 'Monitor Aktif'] as const;
@@ -19,6 +20,7 @@ const STATUS_VARIANT: Record<string, 'success' | 'destructive' | 'warning' | 'de
 };
 
 export function AdminLotsModule() {
+  const { t, lang } = useLanguage();
   const [tab, setTab] = useState<Tab>('Semua Lot');
   const [lots, setLots] = useState<Lot[]>([]);
   const [page, setPage] = useState(1);
@@ -47,23 +49,23 @@ export function AdminLotsModule() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Manajemen Lot & Inspeksi</h1>
+        <h1 className="text-xl font-bold text-gray-900">{lang === 'en' ? 'Lot & Inspection Management' : 'Manajemen Lot & Inspeksi'}</h1>
         <Button size="sm" variant="outline" onClick={() => window.open('/api/reports/export', '_blank')}>
-          Ekspor CSV
+          {lang === 'en' ? 'Export CSV' : 'Ekspor CSV'}
         </Button>
       </div>
 
       <div className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
+        {TABS.map((tabName) => (
           <button
-            key={t}
-            onClick={() => { setTab(t); setPage(1); }}
+            key={tabName}
+            onClick={() => { setTab(tabName); setPage(1); }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-800'
+              tab === tabName ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}
           >
-            {t}
-            {t === 'Monitor Aktif' && <span className="ml-1 text-xs text-orange-500">LIVE</span>}
+            {tabName === 'Semua Lot' ? (lang === 'en' ? 'All Lots' : 'Semua Lot') : (lang === 'en' ? 'Active Monitor' : 'Monitor Aktif')}
+            {tabName === 'Monitor Aktif' && <span className="ml-1 text-xs text-orange-500">LIVE</span>}
           </button>
         ))}
       </div>
@@ -72,14 +74,14 @@ export function AdminLotsModule() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Kode Lot</TableHead>
+              <TableHead>{lang === 'en' ? 'Lot Code' : 'Kode Lot'}</TableHead>
               <TableHead>Batch</TableHead>
-              <TableHead>Produk</TableHead>
+              <TableHead>{lang === 'en' ? 'Product' : 'Produk'}</TableHead>
               <TableHead>Operator</TableHead>
-              <TableHead>Shift</TableHead>
-              <TableHead>Tanggal</TableHead>
-              <TableHead>Status</TableHead>
-              {tab === 'Monitor Aktif' && <TableHead>Waktu Mulai</TableHead>}
+              <TableHead>{t('lot.shift')}</TableHead>
+              <TableHead>{t('common.date')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
+              {tab === 'Monitor Aktif' && <TableHead>{lang === 'en' ? 'Start Time' : 'Waktu Mulai'}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -106,7 +108,9 @@ export function AdminLotsModule() {
             {lots.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-gray-400 py-8">
-                  {tab === 'Monitor Aktif' ? 'Tidak ada sesi inspeksi aktif' : 'Tidak ada data lot'}
+                  {tab === 'Monitor Aktif'
+                    ? (lang === 'en' ? 'No active inspection sessions' : 'Tidak ada sesi inspeksi aktif')
+                    : (lang === 'en' ? 'No lot data' : 'Tidak ada data lot')}
                 </TableCell>
               </TableRow>
             )}
@@ -116,10 +120,10 @@ export function AdminLotsModule() {
 
       {tab === 'Semua Lot' && (
         <div className="flex items-center justify-between text-sm text-gray-500">
-          <span>Total: {total} lot</span>
+          <span>Total: {total} {lang === 'en' ? 'lots' : 'lot'}</span>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
-            <span className="self-center">Hal {page} / {Math.ceil(total / perPage)}</span>
+            <span className="self-center">{lang === 'en' ? 'Page' : 'Hal'} {page} / {Math.ceil(total / perPage)}</span>
             <Button size="sm" variant="outline" disabled={page * perPage >= total} onClick={() => setPage(p => p + 1)}>Next</Button>
           </div>
         </div>

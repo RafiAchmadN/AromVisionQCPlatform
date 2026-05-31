@@ -4,9 +4,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useLanguage } from '@/contexts/language-context';
 import type { AuditLog } from '@/lib/types';
 
 export function AdminAuditModule() {
+  const { t, lang } = useLanguage();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -31,14 +33,14 @@ export function AdminAuditModule() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Audit Log</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('nav.audit')}</h1>
         <Badge variant="secondary" className="text-xs">Read-only · Immutable</Badge>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500">Jenis Aksi</label>
+          <label className="text-xs text-gray-500">{t('admin.actionType')}</label>
           <input
             className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
             placeholder="Contoh: LOGIN_SUCCESS"
@@ -47,14 +49,14 @@ export function AdminAuditModule() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500">Dari Tanggal</label>
+          <label className="text-xs text-gray-500">{lang === 'en' ? 'From Date' : 'Dari Tanggal'}</label>
           <input type="date" className="border border-gray-200 rounded px-2 py-1.5 text-sm" value={filter.from} onChange={(e) => setFilter(p => ({...p, from: e.target.value}))} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500">Sampai Tanggal</label>
+          <label className="text-xs text-gray-500">{lang === 'en' ? 'To Date' : 'Sampai Tanggal'}</label>
           <input type="date" className="border border-gray-200 rounded px-2 py-1.5 text-sm" value={filter.to} onChange={(e) => setFilter(p => ({...p, to: e.target.value}))} />
         </div>
-        <Button size="sm" onClick={() => { setPage(1); fetchLogs(); }}>Filter</Button>
+        <Button size="sm" onClick={() => { setPage(1); fetchLogs(); }}>{lang === 'en' ? 'Filter' : 'Filter'}</Button>
         <Button size="sm" variant="ghost" onClick={() => setFilter({ action_type: '', from: '', to: '' })}>Reset</Button>
       </div>
 
@@ -62,12 +64,12 @@ export function AdminAuditModule() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Waktu</TableHead>
-              <TableHead>Jenis Aksi</TableHead>
-              <TableHead>Pelaku</TableHead>
-              <TableHead>Target</TableHead>
+              <TableHead>{t('admin.time')}</TableHead>
+              <TableHead>{t('admin.actionType')}</TableHead>
+              <TableHead>{t('admin.actor')}</TableHead>
+              <TableHead>{t('admin.target')}</TableHead>
               <TableHead>IP</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -84,17 +86,17 @@ export function AdminAuditModule() {
               </TableRow>
             ))}
             {logs.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">Tidak ada data audit log</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-gray-400 py-8">{lang === 'en' ? 'No audit log data' : 'Tidak ada data audit log'}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </Card>
 
       <div className="flex items-center justify-between text-sm text-gray-500">
-        <span>Total: {total} entri</span>
+        <span>Total: {total} {lang === 'en' ? 'entries' : 'entri'}</span>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
-          <span className="self-center">Hal {page} / {Math.ceil(total / 20)}</span>
+          <span className="self-center">{lang === 'en' ? 'Page' : 'Hal'} {page} / {Math.ceil(total / 20)}</span>
           <Button size="sm" variant="outline" disabled={page * 20 >= total} onClick={() => setPage(p => p + 1)}>Next</Button>
         </div>
       </div>
