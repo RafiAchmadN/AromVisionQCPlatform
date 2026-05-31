@@ -1,13 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/language-context';
 
 type Period = 'daily' | 'weekly' | 'monthly';
-
-const PERIODS: { key: Period; label: string; desc: string }[] = [
-  { key: 'daily',   label: 'Harian',   desc: 'Data hari ini' },
-  { key: 'weekly',  label: 'Mingguan', desc: '7 hari terakhir' },
-  { key: 'monthly', label: 'Bulanan',  desc: '30 hari terakhir' },
-];
 
 const GRADE_COLOR: Record<string, string> = {
   A: '#2d5c33', B: '#4e9955', C: '#c98200', Reject: '#e24b4a',
@@ -43,6 +38,12 @@ function StatRow({ label, value, sub, accent }: { label: string; value: string |
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ReportPanel({ period }: { period: Period }) {
+  const { t, lang } = useLanguage();
+  const PERIODS = [
+    { key: 'daily'   as Period, label: t('rpt.daily'),   desc: lang === 'en' ? "Today's data"  : 'Data hari ini'    },
+    { key: 'weekly'  as Period, label: t('rpt.weekly'),  desc: lang === 'en' ? 'Last 7 days'   : '7 hari terakhir'  },
+    { key: 'monthly' as Period, label: t('rpt.monthly'), desc: lang === 'en' ? 'Last 30 days'  : '30 hari terakhir' },
+  ];
   const [data, setData] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,9 +52,9 @@ function ReportPanel({ period }: { period: Period }) {
     setLoading(true); setError('');
     try {
       const res = await fetch(`/api/reports/${period}`);
-      if (!res.ok) { setError('Gagal memuat laporan'); return; }
+      if (!res.ok) { setError(lang === 'en' ? 'Failed to load report' : 'Gagal memuat laporan'); return; }
       setData(await res.json());
-    } catch { setError('Gagal memuat laporan'); }
+    } catch { setError(lang === 'en' ? 'Failed to load report' : 'Gagal memuat laporan'); }
     finally { setLoading(false); }
   }
 
@@ -65,7 +66,7 @@ function ReportPanel({ period }: { period: Period }) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col items-center gap-3 min-h-[200px] justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-brand-200 border-t-brand-600 animate-spin" />
-        <p className="text-xs text-gray-400">Memuat {p.label}...</p>
+        <p className="text-xs text-gray-400">{t('common.loading')} {p.label}...</p>
       </div>
     );
   }
@@ -74,7 +75,7 @@ function ReportPanel({ period }: { period: Period }) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col items-center gap-3 min-h-[200px] justify-center">
         <p className="text-xs text-red-500">{error}</p>
-        <button onClick={load} type="button" className="text-xs text-brand-600 hover:underline">Coba lagi</button>
+        <button onClick={load} type="button" className="text-xs text-brand-600 hover:underline">{t('common.retry')}</button>
       </div>
     );
   }
@@ -100,7 +101,7 @@ function ReportPanel({ period }: { period: Period }) {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 bg-brand-50 border-b border-brand-100">
         <div>
-          <p className="text-sm font-bold text-brand-800">Laporan {p.label}</p>
+          <p className="text-sm font-bold text-brand-800">{lang === 'en' ? 'Report' : 'Laporan'} {p.label}</p>
           <p className="text-[10px] text-brand-500">{p.desc}</p>
         </div>
         <button type="button" onClick={load} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">↻ Refresh</button>
@@ -109,13 +110,13 @@ function ReportPanel({ period }: { period: Period }) {
       <div className="flex flex-col gap-4 p-5">
         {/* Status lot */}
         <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Status Lot</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{lang === 'en' ? 'Lot Status' : 'Status Lot'}</p>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Total Lot', value: total, color: '#1a3a1f' },
-              { label: 'Disetujui', value: approved, color: STATUS_COLOR.APPROVED },
-              { label: 'Ditolak', value: rejected, color: STATUS_COLOR.REJECTED },
-              { label: 'Karantina', value: quarantined, color: STATUS_COLOR.QUARANTINED },
+              { label: t('rpt.totalLots'),                               value: total,       color: '#1a3a1f' },
+              { label: lang === 'en' ? 'Approved'    : 'Disetujui',     value: approved,    color: STATUS_COLOR.APPROVED },
+              { label: lang === 'en' ? 'Rejected'    : 'Ditolak',       value: rejected,    color: STATUS_COLOR.REJECTED },
+              { label: lang === 'en' ? 'Quarantined' : 'Karantina',     value: quarantined, color: STATUS_COLOR.QUARANTINED },
             ].map(({ label, value, color }) => (
               <div key={label} className="rounded-lg bg-gray-50 px-3 py-2.5">
                 <p className="text-[10px] text-gray-400">{label}</p>
@@ -135,19 +136,19 @@ function ReportPanel({ period }: { period: Period }) {
 
         {/* QC Metrics */}
         <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Metrik QC</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{lang === 'en' ? 'QC Metrics' : 'Metrik QC'}</p>
           <div className="flex flex-col">
-            <StatRow label="Avg Confidence"    value={`${(Number(data.avg_confidence) * 100).toFixed(1)}%`}    accent="#2d5c33" />
-            <StatRow label="Avg Rot Level"     value={`${data.avg_rot_level}%`}       accent="#c98200" />
+            <StatRow label={t('rpt.avgConf')}  value={`${(Number(data.avg_confidence) * 100).toFixed(1)}%`} accent="#2d5c33" />
+            <StatRow label={t('rpt.avgRot')}   value={`${data.avg_rot_level}%`}       accent="#c98200" />
             <StatRow label="Avg Anomaly Score" value={Number(data.avg_anomaly_score).toFixed(3)} />
-            <StatRow label="Avg Durasi"        value={`${data.avg_duration_min} mnt`} />
+            <StatRow label={lang === 'en' ? 'Avg Duration' : 'Avg Durasi'} value={`${data.avg_duration_min} ${lang === 'en' ? 'min' : 'mnt'}`} />
             {scanned > 0 && <>
-              <StatRow label="Total Terpindai" value={scanned} />
+              <StatRow label={t('lot.totalScanned')} value={scanned} />
               <StatRow label="Pass Rate"       value={`${passRate}%`} sub={`${passCount}/${scanned}`} accent="#2d5c33" />
               {failCount > 0 && <StatRow label="Fail" value={failCount} accent="#e24b4a" />}
             </>}
             {data.rejection_rate !== undefined && (
-              <StatRow label="Tingkat Penolakan" value={`${data.rejection_rate}%`} accent={Number(data.rejection_rate) > 20 ? '#e24b4a' : '#2d5c33'} />
+              <StatRow label={lang === 'en' ? 'Rejection Rate' : 'Tingkat Penolakan'} value={`${data.rejection_rate}%`} accent={Number(data.rejection_rate) > 20 ? '#e24b4a' : '#2d5c33'} />
             )}
           </div>
         </div>
@@ -155,7 +156,7 @@ function ReportPanel({ period }: { period: Period }) {
         {/* Grade distribution */}
         {Object.keys(gradeDist).length > 0 && (
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Distribusi Grade</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('admin.gradeDist')}</p>
             <div className="flex flex-col gap-1.5">
               {['A','B','C','Reject'].map(g => gradeDist[g] > 0 && (
                 <MiniBar key={g} label={`Grade ${g}`} value={gradeDist[g]} max={total} color={GRADE_COLOR[g]} />
@@ -167,7 +168,7 @@ function ReportPanel({ period }: { period: Period }) {
         {/* Top defects */}
         {topDefects.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Defek Teratas</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{lang === 'en' ? 'Top Defects' : 'Defek Teratas'}</p>
             <div className="flex flex-col gap-1.5">
               {topDefects.map(([name, count]) => (
                 <MiniBar key={name} label={name.replace(/_/g,' ')} value={count} max={topDefects[0][1]} color="#c98200" />
@@ -180,7 +181,7 @@ function ReportPanel({ period }: { period: Period }) {
         <div className="grid grid-cols-2 gap-4">
           {Object.keys(shiftDist).length > 0 && (
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Per Shift</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{lang === 'en' ? 'Per Shift' : 'Per Shift'}</p>
               {Object.entries(shiftDist).map(([k, v]) => (
                 <div key={k} className="flex justify-between text-xs py-1 border-b border-gray-50">
                   <span className="text-gray-600">{k}</span>
@@ -191,7 +192,7 @@ function ReportPanel({ period }: { period: Period }) {
           )}
           {Object.keys(productDist).length > 0 && (
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Per Produk</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{lang === 'en' ? 'Per Product' : 'Per Produk'}</p>
               {Object.entries(productDist).map(([k, v]) => (
                 <div key={k} className="flex justify-between text-xs py-1 border-b border-gray-50">
                   <span className="text-gray-600 truncate">{k}</span>
@@ -206,21 +207,26 @@ function ReportPanel({ period }: { period: Period }) {
   );
 }
 
+const ALL_PERIODS: Period[] = ['daily', 'weekly', 'monthly'];
+
 export function AdminReportsContent() {
+  const { t, lang } = useLanguage();
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Laporan</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Ringkasan kualitas inspeksi per periode</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('nav.reports')}</h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {lang === 'en' ? 'Inspection quality summary per period' : 'Ringkasan kualitas inspeksi per periode'}
+          </p>
         </div>
         <a href="/api/reports/export" download
           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors">
-          ⬇ Ekspor CSV
+          ⬇ {lang === 'en' ? 'Export CSV' : 'Ekspor CSV'}
         </a>
       </div>
       <div className="flex flex-row gap-4 items-start">
-        {PERIODS.map(({ key }) => (
+        {ALL_PERIODS.map((key) => (
           <div key={key} className="flex-1 min-w-0">
             <ReportPanel period={key} />
           </div>

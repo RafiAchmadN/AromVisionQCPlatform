@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLanguage } from '@/contexts/language-context';
 import type { SystemConfig } from '@/lib/types';
 
 const TABS = ['Threshold', 'Kamera', 'Notifikasi', 'CRON'] as const;
 type Tab = typeof TABS[number];
 
 export function AdminConfigModule() {
+  const { lang } = useLanguage();
   const [tab, setTab] = useState<Tab>('Threshold');
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [saving, setSaving] = useState(false);
@@ -33,45 +35,52 @@ export function AdminConfigModule() {
     else setMsg('Gagal menyimpan konfigurasi');
   }
 
-  if (!config) return <p className="text-gray-500 text-sm">Memuat konfigurasi...</p>;
+  const TAB_LABELS: Record<Tab, string> = {
+    Threshold: 'Threshold',
+    Kamera: lang === 'en' ? 'Camera' : 'Kamera',
+    Notifikasi: lang === 'en' ? 'Notifications' : 'Notifikasi',
+    CRON: 'CRON',
+  };
+
+  if (!config) return <p className="text-gray-500 text-sm">{lang === 'en' ? 'Loading configuration...' : 'Memuat konfigurasi...'}</p>;
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-gray-900">Konfigurasi Sistem</h1>
+      <h1 className="text-xl font-bold text-gray-900">{lang === 'en' ? 'System Configuration' : 'Konfigurasi Sistem'}</h1>
 
       <div className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
+        {TABS.map((tabKey) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-800'
+              tab === tabKey ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}
           >
-            {t}
+            {TAB_LABELS[tabKey]}
           </button>
         ))}
       </div>
 
-      {msg && <p className={`text-sm ${msg.includes('berhasil') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
+      {msg && <p className={`text-sm ${msg.includes('berhasil') || msg.includes('saved') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
 
       {tab === 'Threshold' && (
-        <ThresholdTab config={config} onSave={saveConfig} saving={saving} />
+        <ThresholdTab config={config} onSave={saveConfig} saving={saving} lang={lang} />
       )}
       {tab === 'Kamera' && (
-        <CameraTab config={config} onSave={saveConfig} saving={saving} />
+        <CameraTab config={config} onSave={saveConfig} saving={saving} lang={lang} />
       )}
       {tab === 'CRON' && (
-        <CronTab config={config} saving={saving} />
+        <CronTab config={config} saving={saving} lang={lang} />
       )}
       {tab === 'Notifikasi' && (
-        <NotifikasiTab config={config} onSave={saveConfig} saving={saving} />
+        <NotifikasiTab config={config} onSave={saveConfig} saving={saving} lang={lang} />
       )}
     </div>
   );
 }
 
-function ThresholdTab({ config, onSave, saving }: { config: SystemConfig; onSave: (u: Partial<SystemConfig>) => void; saving: boolean }) {
+function ThresholdTab({ config, onSave, saving, lang }: { config: SystemConfig; onSave: (u: Partial<SystemConfig>) => void; saving: boolean; lang: string }) {
   const [f, setF] = useState({
     confidence_min: config.confidence_min,
     rot_threshold_a: config.rot_threshold_a,
@@ -99,17 +108,17 @@ function ThresholdTab({ config, onSave, saving }: { config: SystemConfig; onSave
         <Input label="Defect Threshold Grade C" type="number" value={f.defect_threshold_c} onChange={(e) => setF(p => ({...p, defect_threshold_c: Number(e.target.value)}))} />
         <Input label="Anomaly Quarantine Threshold" type="number" step="0.01" value={f.anomaly_quarantine_threshold} onChange={(e) => setF(p => ({...p, anomaly_quarantine_threshold: Number(e.target.value)}))} />
         <Input label="Anomaly Escalation Threshold" type="number" step="0.01" value={f.anomaly_escalation_threshold} onChange={(e) => setF(p => ({...p, anomaly_escalation_threshold: Number(e.target.value)}))} />
-        <Input label="Durasi Maks Sesi (detik)" type="number" value={f.session_max_duration_sec} onChange={(e) => setF(p => ({...p, session_max_duration_sec: Number(e.target.value)}))} />
-        <Input label="Conveyor Stop Detect (detik)" type="number" value={f.conveyor_stop_detect_sec} onChange={(e) => setF(p => ({...p, conveyor_stop_detect_sec: Number(e.target.value)}))} />
+        <Input label={lang === 'en' ? 'Max Session Duration (sec)' : 'Durasi Maks Sesi (detik)'} type="number" value={f.session_max_duration_sec} onChange={(e) => setF(p => ({...p, session_max_duration_sec: Number(e.target.value)}))} />
+        <Input label={lang === 'en' ? 'Conveyor Stop Detect (sec)' : 'Conveyor Stop Detect (detik)'} type="number" value={f.conveyor_stop_detect_sec} onChange={(e) => setF(p => ({...p, conveyor_stop_detect_sec: Number(e.target.value)}))} />
         <div className="col-span-2">
-          <Button onClick={() => onSave(f)} loading={saving}>Simpan Threshold</Button>
+          <Button onClick={() => onSave(f)} loading={saving}>{lang === 'en' ? 'Save Thresholds' : 'Simpan Threshold'}</Button>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function CameraTab({ config, onSave, saving }: { config: SystemConfig; onSave: (u: Partial<SystemConfig>) => void; saving: boolean }) {
+function CameraTab({ config, onSave, saving, lang }: { config: SystemConfig; onSave: (u: Partial<SystemConfig>) => void; saving: boolean; lang: string }) {
   const [f, setF] = useState({ camera_url: config.camera_url, camera_resolution: config.camera_resolution, camera_fps: config.camera_fps });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState('');
@@ -128,15 +137,15 @@ function CameraTab({ config, onSave, saving }: { config: SystemConfig; onSave: (
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-sm">Konfigurasi Kamera</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-sm">{lang === 'en' ? 'Camera Configuration' : 'Konfigurasi Kamera'}</CardTitle></CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Input label="URL Stream Kamera" value={f.camera_url} onChange={(e) => setF(p => ({...p, camera_url: e.target.value}))} />
-        <Input label="Resolusi" value={f.camera_resolution} onChange={(e) => setF(p => ({...p, camera_resolution: e.target.value}))} placeholder="1920x1080" />
+        <Input label={lang === 'en' ? 'Camera Stream URL' : 'URL Stream Kamera'} value={f.camera_url} onChange={(e) => setF(p => ({...p, camera_url: e.target.value}))} />
+        <Input label={lang === 'en' ? 'Resolution' : 'Resolusi'} value={f.camera_resolution} onChange={(e) => setF(p => ({...p, camera_resolution: e.target.value}))} placeholder="1920x1080" />
         <Input label="Frame Rate (FPS)" type="number" value={f.camera_fps} onChange={(e) => setF(p => ({...p, camera_fps: Number(e.target.value)}))} />
-        {testResult && <p className={`text-sm ${testResult.includes('berhasil') ? 'text-green-600' : 'text-red-600'}`}>{testResult}</p>}
+        {testResult && <p className={`text-sm ${testResult.includes('berhasil') || testResult.includes('success') ? 'text-green-600' : 'text-red-600'}`}>{testResult}</p>}
         <div className="flex gap-2">
-          <Button onClick={() => onSave(f)} loading={saving}>Simpan</Button>
-          <Button variant="outline" onClick={testConnection} loading={testing}>Test Koneksi</Button>
+          <Button onClick={() => onSave(f)} loading={saving}>{lang === 'en' ? 'Save' : 'Simpan'}</Button>
+          <Button variant="outline" onClick={testConnection} loading={testing}>{lang === 'en' ? 'Test Connection' : 'Test Koneksi'}</Button>
           <Button variant="destructive" onClick={restart}>Restart Camera Service</Button>
         </div>
       </CardContent>
@@ -231,7 +240,7 @@ function CronPicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: boolean }) {
+function CronTab({ config, saving: _saving, lang }: { config: SystemConfig; saving: boolean; lang: string }) {
   const cc = config.cron_config ?? {};
   const [schedules, setSchedules] = useState({
     metrics_refresh_cron:     cc.metrics_refresh_cron     ?? '0 * * * *',
@@ -258,7 +267,7 @@ function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: bo
       body: JSON.stringify({ cron_config: { ...cc, ...schedules } }),
     });
     setSaving(false);
-    setMsg(res.ok ? 'Jadwal CRON berhasil disimpan' : 'Gagal menyimpan');
+    setMsg(res.ok ? (lang === 'en' ? 'CRON schedule saved' : 'Jadwal CRON berhasil disimpan') : (lang === 'en' ? 'Failed to save' : 'Gagal menyimpan'));
   }
 
   const jobs: { id: string; label: string; field: keyof typeof schedules; desc: string }[] = [
@@ -271,7 +280,7 @@ function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: bo
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-sm">Konfigurasi Jadwal Otomatis</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-sm">{lang === 'en' ? 'Automated Schedule Configuration' : 'Konfigurasi Jadwal Otomatis'}</CardTitle></CardHeader>
       <CardContent className="flex flex-col gap-1">
         <div className="divide-y divide-gray-100">
           {jobs.map((job) => (
@@ -282,7 +291,7 @@ function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: bo
                   <p className="text-xs text-gray-400">{job.desc}</p>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => triggerJob(job.id)} loading={triggering === job.id}>
-                  Jalankan Sekarang
+                  {lang === 'en' ? 'Run Now' : 'Jalankan Sekarang'}
                 </Button>
               </div>
               <div className="pl-1">
@@ -299,14 +308,14 @@ function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: bo
         </div>
         {msg && <p className={`text-xs mt-1 ${msg.includes('berhasil') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
         <div className="pt-2">
-          <Button onClick={saveCron} loading={saving}>Simpan Semua Jadwal</Button>
+          <Button onClick={saveCron} loading={saving}>{lang === 'en' ? 'Save All Schedules' : 'Simpan Semua Jadwal'}</Button>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function NotifikasiTab({ config, onSave, saving }: { config: SystemConfig; onSave: (u: Partial<SystemConfig>) => void; saving: boolean }) {
+function NotifikasiTab({ config, onSave, saving, lang }: { config: SystemConfig; onSave: (u: Partial<SystemConfig>) => void; saving: boolean; lang: string }) {
   const nc = config.notification_config ?? {};
   const events = [
     { key: 'LOT_APPROVED',           label: 'Lot Disetujui' },
@@ -344,7 +353,7 @@ function NotifikasiTab({ config, onSave, saving }: { config: SystemConfig; onSav
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-sm">Konfigurasi Notifikasi</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-sm">{lang === 'en' ? 'Notification Configuration' : 'Konfigurasi Notifikasi'}</CardTitle></CardHeader>
       <CardContent className="flex flex-col gap-5">
         {/* Event toggles */}
         <div>
@@ -374,7 +383,7 @@ function NotifikasiTab({ config, onSave, saving }: { config: SystemConfig; onSav
 
         {/* Report recipients */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-600">Penerima Laporan (pisahkan dengan koma)</label>
+          <label className="text-xs font-semibold text-gray-600">{lang === 'en' ? 'Report Recipients (comma-separated)' : 'Penerima Laporan (pisahkan dengan koma)'}</label>
           <input
             type="text"
             value={recipients}
@@ -384,7 +393,7 @@ function NotifikasiTab({ config, onSave, saving }: { config: SystemConfig; onSav
           />
         </div>
 
-        <Button onClick={save} loading={saving}>Simpan Notifikasi</Button>
+        <Button onClick={save} loading={saving}>{lang === 'en' ? 'Save Notifications' : 'Simpan Notifikasi'}</Button>
       </CardContent>
     </Card>
   );

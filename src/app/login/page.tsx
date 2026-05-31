@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
+import { useLanguage } from '@/contexts/language-context';
 
 // ─── Floating Particle ────────────────────────────────────────────────────────
 interface Particle { x: number; y: number; size: number; speed: number; opacity: number; drift: number; phase: number; }
@@ -55,7 +56,6 @@ function ParticleField() {
         p.y -= p.speed;
         p.x += p.drift + Math.sin(frame * 0.01 + p.phase) * 0.3;
 
-        // Respawn inside circle when particle exits the radius
         const dx = p.x - CX;
         const dy = p.y - CY;
         if (Math.sqrt(dx * dx + dy * dy) > PARTICLE_RADIUS) {
@@ -105,7 +105,7 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width  - 0.5; // -0.5 to 0.5
+    const x = (e.clientX - rect.left) / rect.width  - 0.5;
     const y = (e.clientY - rect.top)  / rect.height - 0.5;
     el.style.transform = `perspective(900px) rotateX(${-y * 8}deg) rotateY(${x * 10}deg) scale3d(1.02,1.02,1.02)`;
     el.style.boxShadow = `${-x * 20}px ${-y * 20}px 50px rgba(20,45,24,0.25), 0 24px 64px rgba(0,0,0,0.3)`;
@@ -131,35 +131,49 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode; cla
   );
 }
 
-// ─── Animated gradient orb ────────────────────────────────────────────────────
-function GradientOrbs() {
+// ─── Mouse-following gradient orbs ───────────────────────────────────────────
+function GradientOrbs({ mx, my }: { mx: number; my: number }) {
+  // mx/my are 0..1 relative to viewport
+  const ox = (mx - 0.5) * 60;
+  const oy = (my - 0.5) * 60;
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Large orb top-left */}
       <div
         className="absolute rounded-full opacity-20"
         style={{
-          width: 500, height: 500, top: -150, left: -100,
+          width: 500, height: 500, top: -150 + oy * 0.6, left: -100 + ox * 0.4,
           background: 'radial-gradient(circle, #2d5c33, #4e9955, transparent 70%)',
           animation: 'orbFloat1 12s ease-in-out infinite',
+          transition: 'top 0.8s ease, left 0.8s ease',
         }}
       />
-      {/* Medium orb center-right */}
       <div
         className="absolute rounded-full opacity-15"
         style={{
-          width: 300, height: 300, top: '30%', right: -80,
+          width: 300, height: 300, top: `calc(30% + ${oy * 0.4}px)`, right: -80 - ox * 0.3,
           background: 'radial-gradient(circle, #1a3a1f, #2d5c33, transparent 70%)',
           animation: 'orbFloat2 9s ease-in-out infinite',
+          transition: 'top 0.8s ease, right 0.8s ease',
         }}
       />
-      {/* Small orb bottom */}
       <div
         className="absolute rounded-full opacity-25"
         style={{
-          width: 200, height: 200, bottom: -60, left: '40%',
+          width: 200, height: 200, bottom: -60 - oy * 0.3, left: `calc(40% + ${ox * 0.5}px)`,
           background: 'radial-gradient(circle, #72c278, transparent 70%)',
           animation: 'orbFloat3 7s ease-in-out infinite',
+          transition: 'bottom 0.8s ease, left 0.8s ease',
+        }}
+      />
+      {/* Extra cursor-follow orb */}
+      <div
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          width: 180, height: 180,
+          top: `calc(${my * 100}% - 90px)`,
+          left: `calc(${mx * 100}% - 90px)`,
+          background: 'radial-gradient(circle, rgba(78,153,85,0.12), transparent 70%)',
+          transition: 'top 0.3s ease, left 0.3s ease',
         }}
       />
     </div>
@@ -169,14 +183,20 @@ function GradientOrbs() {
 // ─── Main Login Page ──────────────────────────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
+  const { lang, toggle } = useLanguage();
   const [email, setEmail]   = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mouse, setMouse] = useState({ x: 0.5, y: 0.5 });
 
   useEffect(() => { setMounted(true); }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    setMouse({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight });
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -188,127 +208,86 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.message ?? 'Login gagal'); return; }
+      if (!res.ok) { setError(data.message ?? (lang === 'en' ? 'Login failed' : 'Login gagal')); return; }
       router.replace('/dashboard');
     } catch {
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+      setError(lang === 'en' ? 'An error occurred. Please try again.' : 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
   }
 
+  const features = lang === 'en'
+    ? [
+        { label: 'Realtime detection',  sub: 'Rot level · Defect count · Anomaly score' },
+        { label: 'Auto-decision engine', sub: 'Grade A/B/C/Reject with per-product thresholds' },
+        { label: 'Full audit trail',     sub: 'Every decision recorded, immutable' },
+      ]
+    : [
+        { label: 'Realtime detection',  sub: 'Rot level · Defect count · Anomaly score' },
+        { label: 'Auto-decision engine', sub: 'Grade A/B/C/Reject dengan threshold per produk' },
+        { label: 'Full audit trail',     sub: 'Setiap keputusan tercatat, immutable' },
+      ];
+
   return (
     <>
-      {/* Keyframe injection */}
       <style>{`
-        @keyframes orbFloat1 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          33%      { transform: translate(30px,-20px) scale(1.05); }
-          66%      { transform: translate(-20px,15px) scale(0.97); }
-        }
-        @keyframes orbFloat2 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          50%      { transform: translate(-25px,30px) scale(1.08); }
-        }
-        @keyframes orbFloat3 {
-          0%,100% { transform: translate(0,0); }
-          50%      { transform: translate(20px,-15px); }
-        }
-        @keyframes gradientShift {
-          0%   { background-position: 0% 50%; }
-          50%  { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @keyframes slideUp {
-          from { opacity:0; transform: translateY(30px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
-        @keyframes fadeIn {
-          from { opacity:0; }
-          to   { opacity:1; }
-        }
-        .login-feature:nth-child(1) { animation: slideUp 0.6s 0.5s cubic-bezier(.22,1,.36,1) both; }
-        .login-feature:nth-child(2) { animation: slideUp 0.6s 0.7s cubic-bezier(.22,1,.36,1) both; }
-        .login-feature:nth-child(3) { animation: slideUp 0.6s 0.9s cubic-bezier(.22,1,.36,1) both; }
+        @keyframes orbFloat1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(30px,-20px) scale(1.05)} 66%{transform:translate(-20px,15px) scale(0.97)} }
+        @keyframes orbFloat2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-25px,30px) scale(1.08)} }
+        @keyframes orbFloat3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-15px)} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+        .login-feature:nth-child(1){animation:slideUp 0.6s 0.5s cubic-bezier(.22,1,.36,1) both}
+        .login-feature:nth-child(2){animation:slideUp 0.6s 0.7s cubic-bezier(.22,1,.36,1) both}
+        .login-feature:nth-child(3){animation:slideUp 0.6s 0.9s cubic-bezier(.22,1,.36,1) both}
       `}</style>
 
       <div
         className="min-h-screen flex relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(90deg, #122a16 0%, #051208 28%, #010503 50%, #051208 72%, #122a16 100%)',
-        }}
+        style={{ background: 'linear-gradient(90deg, #122a16 0%, #051208 28%, #010503 50%, #051208 72%, #122a16 100%)' }}
+        onMouseMove={handleMouseMove}
       >
-        <GradientOrbs />
+        <GradientOrbs mx={mouse.x} my={mouse.y} />
+
+        {/* Language toggle — top right */}
+        <button
+          type="button"
+          onClick={toggle}
+          className="absolute top-4 right-4 z-50 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-700/60 bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-all text-[11px] font-semibold"
+        >
+          <span className={lang === 'id' ? 'text-brand-300' : 'text-brand-600'}>ID</span>
+          <span className="text-brand-700 mx-0.5">|</span>
+          <span className={lang === 'en' ? 'text-brand-300' : 'text-brand-600'}>EN</span>
+        </button>
 
         {/* ── LEFT PANEL ─────────────────────────────────────────────── */}
         <div className="hidden lg:flex w-1/2 flex-col items-center justify-center relative px-12 z-10">
-
           <div
             className="relative z-10 flex flex-col items-center gap-8 max-w-sm text-center"
             style={{ animation: mounted ? 'slideUp 0.7s 0.1s cubic-bezier(.22,1,.36,1) both' : 'none' }}
           >
-            {/* Logo + title section — particles confined here only */}
             <div className="relative flex flex-col items-center gap-6 pb-2">
               <ParticleField />
-
-              {/* Logo with 3D spin on hover */}
-              <div
-                className="relative z-10 group cursor-default"
-                style={{ animation: 'orbFloat2 6s ease-in-out infinite' }}
-              >
-                <div
-                  className="absolute inset-0 rounded-full opacity-40 blur-xl scale-150"
-                  style={{ background: 'radial-gradient(circle, #4e9955, transparent)' }}
-                />
-                <Image
-                  src="/logo.svg"
-                  alt="AromVision Logo"
-                  width={110}
-                  height={121}
-                  unoptimized
-                  priority
-                  className="relative drop-shadow-[0_0_24px_rgba(114,194,120,0.6)] group-hover:scale-110 transition-transform duration-500"
-                />
+              <div className="relative z-10 group cursor-default" style={{ animation: 'orbFloat2 6s ease-in-out infinite' }}>
+                <div className="absolute inset-0 rounded-full opacity-40 blur-xl scale-150" style={{ background: 'radial-gradient(circle, #4e9955, transparent)' }} />
+                <Image src="/logo.svg" alt="AromVision Logo" width={110} height={121} unoptimized priority
+                  className="relative drop-shadow-[0_0_24px_rgba(114,194,120,0.6)] group-hover:scale-110 transition-transform duration-500" />
               </div>
-
-              {/* Brand name with gradient text */}
               <div className="relative z-10">
-                <h1
-                  className="text-5xl font-black tracking-tight"
-                  style={{
-                    background: 'linear-gradient(135deg, #ffffff 0%, #a8d8ab 40%, #72c278 70%, #4e9955 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    textShadow: 'none',
-                  }}
-                >
+                <h1 className="text-5xl font-black tracking-tight"
+                  style={{ background: 'linear-gradient(135deg, #ffffff 0%, #a8d8ab 40%, #72c278 70%, #4e9955 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                   AromVision
                 </h1>
-                <p
-                  className="text-brand-500 text-sm mt-2 font-medium tracking-wide"
-                  style={{ animation: 'fadeIn 1s 0.8s both' }}
-                >
+                <p className="text-brand-500 text-sm mt-2 font-medium tracking-wide" style={{ animation: 'fadeIn 1s 0.8s both' }}>
                   AI Quality Control Platform
                 </p>
-                <div
-                  className="h-px mt-3 mx-auto w-24 rounded-full"
-                  style={{ background: 'linear-gradient(90deg, transparent, #72c278, transparent)' }}
-                />
+                <div className="h-px mt-3 mx-auto w-24 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #72c278, transparent)' }} />
               </div>
             </div>
 
-            {/* Feature list — no particles here */}
             <div className="w-full flex flex-col gap-3">
-              {[
-                { label: 'Realtime detection',  sub: 'Rot level · Defect count · Anomaly score' },
-                { label: 'Auto-decision engine', sub: 'Grade A/B/C/Reject dengan threshold per produk' },
-                { label: 'Full audit trail',     sub: 'Setiap keputusan tercatat, immutable' },
-              ].map(({ label, sub }) => (
-                <div
-                  key={label}
-                  className="login-feature flex items-start gap-3 text-left rounded-lg px-3 py-2.5 border border-brand-700/30 hover:border-brand-500/50 hover:bg-white/5 transition-all duration-300 cursor-default group"
-                >
+              {features.map(({ label, sub }) => (
+                <div key={label} className="login-feature flex items-start gap-3 text-left rounded-lg px-3 py-2.5 border border-brand-700/30 hover:border-brand-500/50 hover:bg-white/5 transition-all duration-300 cursor-default group">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300"
                     style={{ background: 'linear-gradient(135deg, #2d5c33, #4e9955)' }}>
                     <span className="w-2 h-2 rounded-full bg-brand-300 inline-block" />
@@ -321,11 +300,7 @@ export default function LoginPage() {
               ))}
             </div>
 
-            {/* Tagline */}
-            <p
-              className="text-[11px] text-brand-700 italic"
-              style={{ animation: 'fadeIn 1.2s 1.2s both' }}
-            >
+            <p className="text-[11px] text-brand-700 italic" style={{ animation: 'fadeIn 1.2s 1.2s both' }}>
               Sima Arome · CyberHack 2026 · ITS Surabaya
             </p>
           </div>
@@ -333,62 +308,42 @@ export default function LoginPage() {
 
         {/* ── RIGHT PANEL ────────────────────────────────────────────── */}
         <div className="flex-1 flex items-center justify-center p-6 relative z-10">
-          <div
-            className="w-full max-w-sm"
-            style={{ animation: mounted ? 'slideUp 0.7s 0.2s cubic-bezier(.22,1,.36,1) both' : 'none' }}
-          >
-            {/* Mobile brand */}
+          <div className="w-full max-w-sm" style={{ animation: mounted ? 'slideUp 0.7s 0.2s cubic-bezier(.22,1,.36,1) both' : 'none' }}>
             <div className="lg:hidden flex items-center gap-2 justify-center mb-6">
               <Image src="/logo.svg" alt="AromVision" width={32} height={32} unoptimized className="drop-shadow-[0_0_8px_rgba(114,194,120,0.6)]" />
               <span className="text-xl font-bold text-brand-400">AromVision</span>
             </div>
 
-            {/* 3D Tilt login card */}
             <TiltCard>
               <div className="relative rounded-2xl overflow-hidden">
-                {/* Card shimmer edge */}
-                <div
-                  className="absolute inset-0 rounded-2xl pointer-events-none z-20 opacity-0 hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%, rgba(255,255,255,0.03) 100%)' }}
-                />
+                <div className="absolute inset-0 rounded-2xl pointer-events-none z-20 opacity-0 hover:opacity-100 transition-opacity duration-300"
+                  style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%, rgba(255,255,255,0.03) 100%)' }} />
                 <div className="relative z-10 bg-white rounded-2xl p-8">
                   <div className="mb-6">
-                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">Selamat Datang</h2>
-                    <p className="text-sm text-gray-400 mt-1">Masuk ke AromVision QC Platform</p>
+                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                      {lang === 'en' ? 'Welcome' : 'Selamat Datang'}
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-1">
+                      {lang === 'en' ? 'Sign in to AromVision QC Platform' : 'Masuk ke AromVision QC Platform'}
+                    </p>
                   </div>
 
                   <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Email</label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded-xl border-2 border-gray-100 text-sm px-4 py-3 focus:outline-none focus:border-brand-400 focus:ring-4 focus:ring-brand-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                        placeholder="email@perusahaan.com"
-                        required
-                        autoComplete="email"
-                      />
+                        placeholder="email@perusahaan.com" required autoComplete="email" />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Password</label>
                       <div className="relative">
-                        <input
-                          type={showPw ? 'text' : 'password'}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                        <input type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
                           className="w-full rounded-xl border-2 border-gray-100 text-sm px-4 py-3 pr-12 focus:outline-none focus:border-brand-400 focus:ring-4 focus:ring-brand-100 transition-all duration-200 bg-gray-50 focus:bg-white"
-                          placeholder="••••••••"
-                          required
-                          autoComplete="current-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPw(p => !p)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-500 transition-colors"
-                          tabIndex={-1}
-                        >
+                          placeholder="••••••••" required autoComplete="current-password" />
+                        <button type="button" onClick={() => setShowPw(p => !p)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-500 transition-colors" tabIndex={-1}>
                           {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
@@ -400,17 +355,11 @@ export default function LoginPage() {
                       </div>
                     )}
 
-                    <button
-                      type="submit"
-                      disabled={loading}
+                    <button type="submit" disabled={loading}
                       className="relative w-full h-12 rounded-xl font-bold text-sm text-white overflow-hidden group disabled:opacity-60 mt-1"
-                      style={{ background: 'linear-gradient(135deg, #0d2010, #1a3a1f 40%, #2d5c33 70%, #3d7040)' }}
-                    >
-                      {/* Shine effect */}
-                      <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                        style={{ background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)' }}
-                      />
+                      style={{ background: 'linear-gradient(135deg, #0d2010, #1a3a1f 40%, #2d5c33 70%, #3d7040)' }}>
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                        style={{ background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)' }} />
                       <span className="relative">
                         {loading ? (
                           <span className="flex items-center justify-center gap-2">
@@ -418,16 +367,16 @@ export default function LoginPage() {
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                             </svg>
-                            Memuat...
+                            {lang === 'en' ? 'Loading...' : 'Memuat...'}
                           </span>
-                        ) : 'Masuk'}
+                        ) : (lang === 'en' ? 'Sign In' : 'Masuk')}
                       </span>
                     </button>
 
                     <p className="text-center text-xs text-gray-400">
-                      Belum punya akun?{' '}
+                      {lang === 'en' ? "Don't have an account? " : 'Belum punya akun? '}
                       <Link href="/signup" className="text-brand-600 font-bold hover:text-brand-500 hover:underline transition-colors">
-                        Daftar di sini
+                        {lang === 'en' ? 'Register here' : 'Daftar di sini'}
                       </Link>
                     </p>
                   </form>
@@ -435,11 +384,7 @@ export default function LoginPage() {
               </div>
             </TiltCard>
 
-            {/* Demo credentials */}
-            <div
-              className="mt-4 rounded-xl p-4 text-xs border border-brand-700/40 backdrop-blur-sm"
-              style={{ background: 'rgba(5,18,8,0.7)' }}
-            >
+            <div className="mt-4 rounded-xl p-4 text-xs border border-brand-700/40 backdrop-blur-sm" style={{ background: 'rgba(5,18,8,0.7)' }}>
               <p className="font-bold text-brand-400 mb-2 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-brand-400 inline-block" />
                 Demo Credentials
