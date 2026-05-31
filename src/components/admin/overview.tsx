@@ -31,7 +31,7 @@ function MetricCard({ label, value, sub, borderColor, valueColor, subColor }: Me
 // ─── Grade distribution donut chart ─────────────────────────────
 function GradeDonut({ dist }: { dist: { A: number; B: number; C: number; Reject: number } }) {
   const total = dist.A + dist.B + dist.C + dist.Reject;
-  const r = 40;
+  const r = 70;
   const circ = 2 * Math.PI * r;
 
   const segments = [
@@ -43,7 +43,7 @@ function GradeDonut({ dist }: { dist: { A: number; B: number; C: number; Reject:
 
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center h-24 text-xs text-gray-400 italic">
+      <div className="flex items-center justify-center h-32 text-xs text-gray-400 italic">
         Belum ada inspeksi hari ini
       </div>
     );
@@ -52,9 +52,9 @@ function GradeDonut({ dist }: { dist: { A: number; B: number; C: number; Reject:
   let accumulated = 0;
 
   return (
-    <div className="flex items-center gap-6">
-      <svg width="100" height="100" viewBox="0 0 100 100" className="shrink-0">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#e4e9e3" strokeWidth="13"/>
+    <div className="flex flex-col items-center gap-4">
+      <svg width="180" height="180" viewBox="0 0 180 180" className="shrink-0">
+        <circle cx="90" cy="90" r={r} fill="none" stroke="#e4e9e3" strokeWidth="18"/>
         {segments.map(({ key, color }) => {
           const value = dist[key];
           if (value === 0) return null;
@@ -65,25 +65,25 @@ function GradeDonut({ dist }: { dist: { A: number; B: number; C: number; Reject:
           return (
             <circle
               key={key}
-              cx="50" cy="50" r={r}
+              cx="90" cy="90" r={r}
               fill="none"
               stroke={color}
-              strokeWidth="13"
+              strokeWidth="18"
               strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`}
               strokeDashoffset={offset.toFixed(2)}
-              transform="rotate(-90 50 50)"
+              transform="rotate(-90 90 90)"
             />
           );
         })}
-        <text x="50" y="46" textAnchor="middle" fontSize="15" fontWeight="800" fill="#1a3a1f" fontFamily="Poppins,sans-serif">{total}</text>
-        <text x="50" y="59" textAnchor="middle" fontSize="10" fill="#7a8c79" fontFamily="Poppins,sans-serif">lot</text>
+        <text x="90" y="84" textAnchor="middle" fontSize="24" fontWeight="800" fill="#1a3a1f" fontFamily="Poppins,sans-serif">{total}</text>
+        <text x="90" y="101" textAnchor="middle" fontSize="13" fill="#7a8c79" fontFamily="Poppins,sans-serif">lot</text>
       </svg>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 flex-1">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 w-full px-2">
         {segments.map(({ key, color, label }) => (
           <div key={key} className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: color }}/>
+            <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: color }}/>
             <span className="text-xs text-gray-600">{label}</span>
-            <span className="text-xs font-bold text-gray-900 ml-auto">{dist[key]}</span>
+            <span className="text-sm font-bold text-gray-900 ml-auto">{dist[key]}</span>
           </div>
         ))}
       </div>
