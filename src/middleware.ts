@@ -51,7 +51,9 @@ export async function middleware(request: NextRequest) {
 
   // Fetch role from DB via admin client isn't possible in Edge runtime;
   // role stored in user_metadata at signup for middleware-level enforcement.
-  const role = (user.user_metadata?.role as string) ?? '';
+  // Normalize to Title-case so 'operator' / 'OPERATOR' all match 'Operator'.
+  const rawRole = (user.user_metadata?.role as string) ?? '';
+  const role = rawRole ? rawRole.charAt(0).toUpperCase() + rawRole.slice(1).toLowerCase() : '';
 
   for (const [roleKey, prefixes] of Object.entries(ROLE_ROUTES)) {
     if (prefixes.some((p) => pathname.startsWith(p))) {

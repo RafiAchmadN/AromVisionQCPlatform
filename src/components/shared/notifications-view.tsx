@@ -2,22 +2,8 @@
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 import type { Notification } from '@/lib/types';
-
-const TYPE_LABEL: Record<string, string> = {
-  SESSION_COMPLETE: 'Sesi Selesai',
-  LOT_READY_FOR_REVIEW: 'Siap Review',
-  LOT_APPROVED: 'Lot Disetujui',
-  LOT_REJECTED: 'Lot Ditolak',
-  LOT_QUARANTINED: 'Lot Dikarantina',
-  LOT_ESCALATED: 'Lot Dieskalasi',
-  CRITICAL_QUALITY_ALERT: 'Alert Kualitas',
-  SYSTEM_ALERT: 'System Alert',
-  USER_ALERT: 'User Alert',
-  DATA_ALERT: 'Data Alert',
-  PERFORMANCE_ALERT: 'Performance Alert',
-  CRON_REPORT_READY: 'Laporan Siap',
-};
 
 const TYPE_VARIANT: Record<string, 'success' | 'destructive' | 'warning' | 'default' | 'secondary'> = {
   LOT_APPROVED: 'success',
@@ -31,8 +17,24 @@ const TYPE_VARIANT: Record<string, 'success' | 'destructive' | 'warning' | 'defa
 };
 
 export function NotificationsView() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const TYPE_LABEL: Record<string, string> = {
+    SESSION_COMPLETE: t('notif.sessionDone'),
+    LOT_READY_FOR_REVIEW: t('notif.readyReview'),
+    LOT_APPROVED: t('notif.lotApproved'),
+    LOT_REJECTED: t('notif.lotRejected'),
+    LOT_QUARANTINED: t('notif.lotQuarantined'),
+    LOT_ESCALATED: t('notif.lotEscalated'),
+    CRITICAL_QUALITY_ALERT: t('notif.qualityAlert'),
+    SYSTEM_ALERT: 'System Alert',
+    USER_ALERT: 'User Alert',
+    DATA_ALERT: 'Data Alert',
+    PERFORMANCE_ALERT: 'Performance Alert',
+    CRON_REPORT_READY: t('notif.reportReady'),
+  };
 
   useEffect(() => {
     fetchNotifs();
@@ -64,9 +66,9 @@ export function NotificationsView() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Notifikasi</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('notif.title')}</h1>
         {unreadCount > 0 && (
-          <p className="text-xs text-gray-500 mt-0.5">{unreadCount} belum terbaca</p>
+          <p className="text-xs text-gray-500 mt-0.5">{unreadCount} {t('notif.unread')}</p>
         )}
       </div>
 
@@ -82,7 +84,7 @@ export function NotificationsView() {
       ) : notifications.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <Bell className="mx-auto h-8 w-8 mb-3 opacity-40" />
-          <p className="text-sm">Tidak ada notifikasi</p>
+          <p className="text-sm">{t('notif.empty')}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -115,7 +117,7 @@ export function NotificationsView() {
                     onClick={() => markRead(n.id)}
                     className="text-xs text-brand-500 hover:text-brand-600 shrink-0 mt-0.5 hover:underline"
                   >
-                    Tandai terbaca
+                    {t('notif.markRead')}
                   </button>
                 )}
               </div>

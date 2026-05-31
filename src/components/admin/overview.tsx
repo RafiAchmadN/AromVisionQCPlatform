@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 import type { MetricsSummary, AuditLog } from '@/lib/types';
 
 // ─── Metric card with colored top border ────────────────────────
@@ -44,6 +45,7 @@ function GradeDonut({ dist }: { dist: { A: number; B: number; C: number; Reject:
   if (total === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-xs text-gray-400 italic">
+        {/* no inspections today — rendered without hook, string is static */}
         Belum ada inspeksi hari ini
       </div>
     );
@@ -161,6 +163,7 @@ function TrendChart({ trend }: { trend: Array<{ date: string; approved: number; 
 
 // ─── Main AdminOverview ─────────────────────────────────────────
 export function AdminOverview() {
+  const { t } = useLanguage();
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [activities, setActivities] = useState<AuditLog[]>([]);
 
@@ -184,14 +187,14 @@ export function AdminOverview() {
 
   const summaryCards: MetricCardProps[] = metrics
     ? [
-        { label: 'Disetujui Hari Ini', value: metrics.total_approved_today, sub: 'lot lulus QC', borderColor: '#2d5c33', valueColor: '#1a3a1f', subColor: '#4e9955' },
-        { label: 'Pending Review', value: metrics.pending_lots, sub: 'perlu aksi', borderColor: '#c98200', valueColor: '#7a4e00' },
-        { label: 'Ditolak Hari Ini', value: metrics.total_rejected_today, sub: 'lot gagal QC', borderColor: '#e24b4a', valueColor: '#7f1d1d' },
-        { label: 'Dikarantina', value: metrics.total_quarantined_today, sub: 'hari ini', borderColor: '#e24b4a', valueColor: '#7f1d1d' },
-        { label: 'Operator Aktif', value: metrics.active_operators, sub: 'terdaftar', borderColor: '#4e9955', valueColor: '#1a3a1f', subColor: '#4e9955' },
-        { label: 'Manager Aktif', value: metrics.active_managers, sub: 'terdaftar', borderColor: '#4e9955', valueColor: '#1a3a1f', subColor: '#4e9955' },
-        { label: 'Alert Belum Ditangani', value: metrics.unhandled_alerts, sub: 'perlu perhatian', borderColor: '#c98200', valueColor: '#7a4e00' },
-        { label: 'Avg AI Confidence', value: `${(metrics.avg_confidence * 100).toFixed(1)}%`, sub: 'rata-rata inspeksi', borderColor: '#2d5c33', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: t('admin.approvedToday'),   value: metrics.total_approved_today,   sub: t('admin.lotsPassedQC'),  borderColor: '#2d5c33', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: t('admin.pendingReview'),    value: metrics.pending_lots,           sub: t('admin.needsAction'),   borderColor: '#c98200', valueColor: '#7a4e00' },
+        { label: t('admin.rejectedToday'),    value: metrics.total_rejected_today,   sub: t('admin.lotsFailedQC'), borderColor: '#e24b4a', valueColor: '#7f1d1d' },
+        { label: t('admin.quarantinedToday'),value: metrics.total_quarantined_today, sub: t('admin.today'),         borderColor: '#e24b4a', valueColor: '#7f1d1d' },
+        { label: t('admin.activeOperators'), value: metrics.active_operators,        sub: t('admin.registered'),   borderColor: '#4e9955', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: t('admin.activeManagers'),  value: metrics.active_managers,         sub: t('admin.registered'),   borderColor: '#4e9955', valueColor: '#1a3a1f', subColor: '#4e9955' },
+        { label: t('admin.unhandledAlerts'), value: metrics.unhandled_alerts,        sub: t('admin.needsAttention'),borderColor: '#c98200', valueColor: '#7a4e00' },
+        { label: t('admin.avgAIConf'),       value: `${(metrics.avg_confidence * 100).toFixed(1)}%`, sub: t('admin.avgInspection'), borderColor: '#2d5c33', valueColor: '#1a3a1f', subColor: '#4e9955' },
       ]
     : [];
 
@@ -201,9 +204,9 @@ export function AdminOverview() {
       <div className="animate-fade-up">
         <div className="flex items-center gap-3">
           <div className="h-6 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
-          <h1 className="text-xl font-bold text-gray-900">Overview Sistem</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('admin.overviewTitle')}</h1>
         </div>
-        <p className="text-xs text-gray-400 mt-0.5 ml-4">Update otomatis setiap 15 detik</p>
+        <p className="text-xs text-gray-400 mt-0.5 ml-4">{t('admin.autoRefresh')}</p>
       </div>
 
       {/* Metric cards */}
@@ -233,8 +236,8 @@ export function AdminOverview() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center justify-between">
-                  Distribusi Grade
-                  <span className="text-[10px] font-normal text-gray-400 uppercase tracking-wide">Hari ini</span>
+                  {t('admin.gradeDist')}
+                  <span className="text-[10px] font-normal text-gray-400 uppercase tracking-wide">{t('admin.todayLabel')}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -246,8 +249,8 @@ export function AdminOverview() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center justify-between">
-                  Tren Inspeksi
-                  <span className="text-[10px] font-normal text-gray-400 uppercase tracking-wide">7 Hari</span>
+                  {t('admin.inspTrend')}
+                  <span className="text-[10px] font-normal text-gray-400 uppercase tracking-wide">{t('admin.sevenDays')}</span>
                 </CardTitle>
                 <div className="flex items-center gap-3 mt-1">
                   <div className="flex items-center gap-1.5">
@@ -273,17 +276,17 @@ export function AdminOverview() {
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <span className="h-3 w-1 rounded-full bg-brand-500 inline-block" />
-            Aktivitas Terkini
+            {t('admin.recentActivity')}
           </CardTitle>
         </CardHeader>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Waktu</TableHead>
-              <TableHead>Jenis Aksi</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead>Pelaku</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t('admin.time')}</TableHead>
+              <TableHead>{t('admin.actionType')}</TableHead>
+              <TableHead>{t('admin.target')}</TableHead>
+              <TableHead>{t('admin.actor')}</TableHead>
+              <TableHead>{t('common.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -305,7 +308,7 @@ export function AdminOverview() {
               </TableRow>
             ))}
             {activities.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">Tidak ada aktivitas</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">{t('admin.noActivity')}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

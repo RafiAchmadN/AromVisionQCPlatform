@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 import type { Lot, InspectionReport, Decision } from '@/lib/types';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ManagerDecisionPanel({ selectedLot }: Props) {
+  const { t } = useLanguage();
   const [report, setReport] = useState<InspectionReport | null>(null);
   const [autoDecision, setAutoDecision] = useState<Decision | null>(null);
   const [loading, setLoading] = useState(false);
@@ -114,7 +116,7 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
           <span className="text-2xl">⬅</span>
         </div>
-        <p>Pilih lot dari antrian untuk melihat detail</p>
+        <p>{t('mgr.selectLotHint')}</p>
       </div>
     );
   }
@@ -131,8 +133,7 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
         </div>
         <p className={`font-bold text-xl ${colorMap[doneDecision] ?? 'text-gray-800'}`}>{doneDecision}</p>
         <p className="text-sm text-gray-600 text-center">
-          Keputusan untuk lot <span className="font-medium">{selectedLot.batch_name}</span> telah disimpan.
-          Operator akan mendapat notifikasi.
+          {t('mgr.decisionSaved')} <span className="font-medium">{selectedLot.batch_name}</span> {t('mgr.decisionSavedSuffix')}
         </p>
       </div>
     );
@@ -144,7 +145,7 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
         <div className="flex items-start gap-2">
           <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600 mt-0.5 shrink-0" />
           <div>
-            <h2 className="text-base font-semibold text-gray-800">Review & Keputusan</h2>
+            <h2 className="text-base font-semibold text-gray-800">{t('mgr.reviewDecision')}</h2>
             <p className="text-xs text-brand-600 mt-0.5">{selectedLot.batch_name}</p>
           </div>
         </div>
@@ -173,10 +174,10 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
 
       {report && !loading && (
         <Card>
-          <CardHeader><CardTitle className="text-sm">Detail Inspeksi</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">{t('mgr.inspDetail')}</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-2 text-sm pt-0">
-            <DetailRow label="Batch" value={selectedLot.batch_name} />
-            <DetailRow label="Grade"
+            <DetailRow label={t('mgr.detailBatch')} value={selectedLot.batch_name} />
+            <DetailRow label={t('mgr.detailGrade')}
               value={
                 <Badge variant={
                   report.final_grade === 'A' ? 'success'
@@ -188,20 +189,20 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
                 </Badge>
               }
             />
-            <DetailRow label="Avg Confidence" value={`${(report.avg_confidence * 100).toFixed(1)}%`} />
-            <DetailRow label="Avg Rot Level" value={`${report.avg_rot_level.toFixed(1)}%`} />
+            <DetailRow label={t('rpt.avgConf')} value={`${(report.avg_confidence * 100).toFixed(1)}%`} />
+            <DetailRow label={t('rpt.avgRot')} value={`${report.avg_rot_level.toFixed(1)}%`} />
             <DetailRow label="Anomaly Score" value={report.final_anomaly_score.toFixed(3)} />
-            <DetailRow label="Total Objek" value={report.total_objects_scanned} />
-            <DetailRow label="Pass / Fail" value={`${report.pass_count} / ${report.fail_count}`} />
-            <DetailRow label="Total Defects" value={report.total_defects} />
-            <DetailRow label="Durasi" value={`${Math.round(report.inspection_duration / 60)} menit`} />
+            <DetailRow label={t('mgr.detailTotalObj')} value={report.total_objects_scanned} />
+            <DetailRow label={t('mgr.detailPassFail')} value={`${report.pass_count} / ${report.fail_count}`} />
+            <DetailRow label={t('mgr.detailTotalDef')} value={report.total_defects} />
+            <DetailRow label={t('mgr.detailDuration')} value={`${Math.round(report.inspection_duration / 60)} ${t('mgr.minutes')}`} />
           </CardContent>
         </Card>
       )}
 
       {autoDecision && !loading && (
         <Card>
-          <CardHeader><CardTitle className="text-sm">Rekomendasi Auto-Decision AI</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">{t('mgr.aiReco')}</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
             <Badge
               variant={
@@ -218,7 +219,7 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
               <div className="flex flex-col gap-2">
                 <input
                   className="border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  placeholder="Alasan override (opsional)"
+                  placeholder={t('mgr.overrideReason')}
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                 />
@@ -235,25 +236,25 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
                     ))}
                 </div>
                 <Button size="sm" variant="outline" onClick={() => setShowEscalate(true)} className="self-start">
-                  Eskalasi ke Level Lebih Tinggi
+                  {t('mgr.escalateHigh')}
                 </Button>
               </div>
             )}
 
             {showEscalate && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-gray-600 font-medium">Alasan eskalasi (wajib):</p>
+                <p className="text-xs text-gray-600 font-medium">{t('mgr.escalateReason')}</p>
                 <textarea
                   className="border border-gray-300 rounded px-2 py-1.5 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  placeholder="Jelaskan mengapa lot ini perlu dieskalasi..."
+                  placeholder={t('mgr.escalatePlaceholder')}
                   value={escalationReason}
                   onChange={(e) => setEscalationReason(e.target.value)}
                 />
                 <div className="flex gap-2">
                   <Button size="sm" onClick={escalate} disabled={!escalationReason} loading={confirming}>
-                    Kirim Eskalasi
+                    {t('mgr.sendEscalation')}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowEscalate(false)}>Batal</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowEscalate(false)}>{t('common.cancel')}</Button>
                 </div>
               </div>
             )}
@@ -266,36 +267,36 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
       {/* Manual decision fallback — always available for Manager */}
       {!loading && !autoDecision && (
         <Card>
-          <CardHeader><CardTitle className="text-sm">Keputusan Manual</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">{t('mgr.manualDecision')}</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
             <p className="text-xs text-gray-500">
-              {error ? error : 'Ambil keputusan langsung tanpa menunggu auto-decision AI:'}
+              {error ? error : t('mgr.manualDecisionHint')}
             </p>
             <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="default" onClick={() => confirmDecision('APPROVED')} loading={confirming}>
-                Setujui
+                {t('mgr.approve')}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => confirmDecision('REJECTED')} loading={confirming}>
-                Tolak
+                {t('mgr.reject')}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => confirmDecision('QUARANTINED')} loading={confirming}>
-                Karantina
+                {t('mgr.quarantine')}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setShowEscalate(true)}>
-                Eskalasi
+                {t('mgr.escalate')}
               </Button>
             </div>
             {showEscalate && (
               <div className="flex flex-col gap-2 mt-1">
                 <textarea
                   className="border border-gray-300 rounded px-2 py-1.5 text-sm resize-none h-16 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  placeholder="Alasan eskalasi (wajib)..."
+                  placeholder={t('mgr.escalatePlaceholder')}
                   value={escalationReason}
                   onChange={(e) => setEscalationReason(e.target.value)}
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={escalate} disabled={!escalationReason} loading={confirming}>Kirim</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowEscalate(false)}>Batal</Button>
+                  <Button size="sm" onClick={escalate} disabled={!escalationReason} loading={confirming}>{t('mgr.sendEscalation')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowEscalate(false)}>{t('common.cancel')}</Button>
                 </div>
               </div>
             )}

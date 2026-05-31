@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Search, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 import type { Lot, MetricsSummary } from '@/lib/types';
 
 interface Props {
@@ -24,6 +25,7 @@ function timeAgo(dateStr: string) {
 }
 
 export function ManagerMonitorPanel({ onSelectLot }: Props) {
+  const { t } = useLanguage();
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
   const [q, setQ] = useState('');
@@ -75,7 +77,7 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
       <div className="flex items-center justify-between pb-2 border-b border-brand-100">
         <div className="flex items-center gap-2">
           <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
-          <h2 className="text-base font-semibold text-gray-800">Monitoring</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t('mgr.monitoring')}</h2>
         </div>
         <button
           type="button"
@@ -111,7 +113,7 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
         <input
           className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
-          placeholder="Cari batch, produk..."
+          placeholder={t('mgr.searchPlaceholder')}
           value={q}
           onChange={(e) => handleSearch(e.target.value)}
         />
@@ -121,7 +123,7 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
       <div className="flex flex-col gap-0.5">
         <div className="flex items-center justify-between mb-1">
           <p className="text-xs font-semibold text-gray-700">
-            Antrian Review
+            {t('mgr.reviewQueueLabel')}
             {lots.length > 0 && (
               <span className="ml-1.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full px-1.5 py-0.5">
                 {lots.length}
@@ -131,7 +133,7 @@ export function ManagerMonitorPanel({ onSelectLot }: Props) {
         </div>
 
         {lots.length === 0 ? (
-          <div className="text-center text-gray-400 py-8 text-xs italic">Tidak ada lot pending review</div>
+          <div className="text-center text-gray-400 py-8 text-xs italic">{t('mgr.noPending')}</div>
         ) : (
           lots.map((lot) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
