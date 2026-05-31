@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ManagerSidebar } from '@/components/manager/sidebar';
 
 type Period = 'daily' | 'weekly' | 'monthly';
@@ -21,7 +21,7 @@ function MiniBar({ label, value, max, color }: { label: string; value: number; m
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-600 w-16 shrink-0">{label}</span>
+      <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0 w-20">{label}</span>
       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
       </div>
@@ -45,8 +45,7 @@ function StatRow({ label, value, sub, accent }: { label: string; value: string |
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ReportPanel({ period }: { period: Period }) {
   const [data, setData] = useState<Record<string, any> | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   async function load() {
@@ -55,26 +54,28 @@ function ReportPanel({ period }: { period: Period }) {
       const res = await fetch(`/api/reports/${period}`);
       if (!res.ok) { setError('Gagal memuat laporan'); return; }
       setData(await res.json());
-      setLoaded(true);
     } catch { setError('Gagal memuat laporan'); }
     finally { setLoading(false); }
   }
 
+  useEffect(() => { load(); }, []);
+
   const p = PERIODS.find(x => x.key === period)!;
 
-  if (!loaded) {
+  if (loading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col items-center gap-3 min-h-[200px] justify-center">
-        <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center">
-          <span className="text-brand-600 text-lg">📊</span>
-        </div>
-        <p className="text-sm font-semibold text-gray-700">Laporan {p.label}</p>
-        <p className="text-xs text-gray-400 text-center">{p.desc}</p>
-        <button onClick={load} disabled={loading} type="button"
-          className="mt-1 rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50 transition-colors">
-          {loading ? 'Memuat...' : 'Tampilkan'}
-        </button>
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        <div className="w-8 h-8 rounded-full border-2 border-brand-200 border-t-brand-600 animate-spin" />
+        <p className="text-xs text-gray-400">Memuat {p.label}...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col items-center gap-3 min-h-[200px] justify-center">
+        <p className="text-xs text-red-500">{error}</p>
+        <button onClick={load} type="button" className="text-xs text-brand-600 hover:underline">Coba lagi</button>
       </div>
     );
   }
@@ -102,7 +103,7 @@ function ReportPanel({ period }: { period: Period }) {
           <p className="text-sm font-bold text-brand-800">Laporan {p.label}</p>
           <p className="text-[10px] text-brand-500">{p.desc}</p>
         </div>
-        <button type="button" onClick={() => setLoaded(false)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">✕ Tutup</button>
+        <button type="button" onClick={load} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">↻ Refresh</button>
       </div>
 
       <div className="flex flex-col gap-4 p-5">
