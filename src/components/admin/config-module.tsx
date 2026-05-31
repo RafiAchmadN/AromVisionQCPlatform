@@ -144,6 +144,93 @@ function CameraTab({ config, onSave, saving }: { config: SystemConfig; onSave: (
   );
 }
 
+// ─── Cron helpers ────────────────────────────────────────────────
+type Freq = 'hourly' | 'daily' | 'weekly' | 'monthly';
+
+function parseCron(expr: string): { freq: Freq; minute: number; hour: number; dayOfWeek: number; dayOfMonth: number } {
+  const [min, hr, dom, , dow] = expr.split(' ');
+  if (hr === '*') return { freq: 'hourly',  minute: Number(min), hour: 0,        dayOfWeek: 1, dayOfMonth: 1 };
+  if (dow !== '*') return { freq: 'weekly',  minute: Number(min), hour: Number(hr), dayOfWeek: Number(dow), dayOfMonth: 1 };
+  if (dom !== '*') return { freq: 'monthly', minute: Number(min), hour: Number(hr), dayOfWeek: 1, dayOfMonth: Number(dom) };
+  return               { freq: 'daily',   minute: Number(min), hour: Number(hr), dayOfWeek: 1, dayOfMonth: 1 };
+}
+
+function buildCron({ freq, minute, hour, dayOfWeek, dayOfMonth }: ReturnType<typeof parseCron>): string {
+  if (freq === 'hourly')  return `${minute} * * * *`;
+  if (freq === 'daily')   return `${minute} ${hour} * * *`;
+  if (freq === 'weekly')  return `${minute} ${hour} * * ${dayOfWeek}`;
+  return                         `${minute} ${hour} ${dayOfMonth} * *`;
+}
+
+function humanCron({ freq, minute, hour, dayOfWeek, dayOfMonth }: ReturnType<typeof parseCron>): string {
+  const t  = `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  if (freq === 'hourly')  return `Setiap jam pada menit ke-${minute}`;
+  if (freq === 'daily')   return `Setiap hari pukul ${t}`;
+  if (freq === 'weekly')  return `Setiap ${days[dayOfWeek] ?? 'Senin'} pukul ${t}`;
+  return                         `Setiap tanggal ${dayOfMonth} pukul ${t}`;
+}
+
+// ─── Visual cron picker for one job ──────────────────────────────
+function CronPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [s, setS] = useState(() => parseCron(value));
+  const FREQ_OPTS: { key: Freq; label: string }[] = [
+    { key: 'hourly',  label: 'Setiap Jam' },
+    { key: 'daily',   label: 'Setiap Hari' },
+    { key: 'weekly',  label: 'Setiap Minggu' },
+    { key: 'monthly', label: 'Setiap Bulan' },
+  ];
+  const DAYS = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  function update(patch: Partial<typeof s>) {
+    const next = { ...s, ...patch };
+    setS(next);
+    onChange(buildCron(next));
+  }
+
+  const sel = 'rounded-md border border-gray-200 text-xs px-2 py-1.5 focus:outline-none focus:border-brand-400 bg-white';
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select title="Frekuensi" className={sel} value={s.freq} onChange={(e) => update({ freq: e.target.value as Freq })}>
+        {FREQ_OPTS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+      </select>
+
+      {s.freq === 'weekly' && (
+        <select title="Hari dalam minggu" className={sel} value={s.dayOfWeek} onChange={(e) => update({ dayOfWeek: Number(e.target.value) })}>
+          {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+        </select>
+      )}
+
+      {s.freq === 'monthly' && (
+        <select title="Tanggal dalam bulan" className={sel} value={s.dayOfMonth} onChange={(e) => update({ dayOfMonth: Number(e.target.value) })}>
+          {Array.from({ length: 28 }, (_, i) => i + 1).map(d => <option key={d} value={d}>Tgl {d}</option>)}
+        </select>
+      )}
+
+      {s.freq !== 'hourly' && (
+        <>
+          <span className="text-xs text-gray-500">pukul</span>
+          <select title="Jam" className={sel} value={s.hour} onChange={(e) => update({ hour: Number(e.target.value) })}>
+            {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2,'0')}:00</option>)}
+          </select>
+        </>
+      )}
+
+      {s.freq === 'hourly' && (
+        <>
+          <span className="text-xs text-gray-500">menit ke-</span>
+          <select title="Menit" className={sel} value={s.minute} onChange={(e) => update({ minute: Number(e.target.value) })}>
+            {[0,5,10,15,20,30,45].map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </>
+      )}
+
+      <span className="text-[10px] text-gray-400 font-mono bg-gray-50 border border-gray-100 rounded px-2 py-1">{buildCron(s)}</span>
+    </div>
+  );
+}
+
 function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: boolean }) {
   const cc = config.cron_config ?? {};
   const [schedules, setSchedules] = useState({
@@ -184,32 +271,35 @@ function CronTab({ config, saving: _saving }: { config: SystemConfig; saving: bo
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-sm">Konfigurasi CRON Jobs</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-sm">Konfigurasi Jadwal Otomatis</CardTitle></CardHeader>
       <CardContent className="flex flex-col gap-1">
-        <p className="text-xs text-gray-400 mb-3">Format: menit jam hari-bulan bulan hari-minggu (contoh: <span className="font-mono">0 8 * * *</span> = setiap hari jam 08:00)</p>
         <div className="divide-y divide-gray-100">
           {jobs.map((job) => (
-            <div key={job.id} className="flex items-center gap-4 py-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800">{job.label}</p>
-                <p className="text-xs text-gray-400">{job.desc}</p>
+            <div key={job.id} className="py-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{job.label}</p>
+                  <p className="text-xs text-gray-400">{job.desc}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => triggerJob(job.id)} loading={triggering === job.id}>
+                  Jalankan Sekarang
+                </Button>
               </div>
-              <input
-                type="text"
-                value={schedules[job.field]}
-                onChange={(e) => setSchedules((p) => ({ ...p, [job.field]: e.target.value }))}
-                className="w-36 rounded-md border border-gray-200 px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
-                placeholder="* * * * *"
-              />
-              <Button size="sm" variant="outline" onClick={() => triggerJob(job.id)} loading={triggering === job.id}>
-                Trigger
-              </Button>
+              <div className="pl-1">
+                <p className="text-[10px] text-gray-400 mb-1.5">
+                  Jadwal: <span className="text-brand-600 font-medium">{humanCron(parseCron(schedules[job.field]))}</span>
+                </p>
+                <CronPicker
+                  value={schedules[job.field]}
+                  onChange={(v) => setSchedules((p) => ({ ...p, [job.field]: v }))}
+                />
+              </div>
             </div>
           ))}
         </div>
         {msg && <p className={`text-xs mt-1 ${msg.includes('berhasil') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
-        <div className="pt-3">
-          <Button onClick={saveCron} loading={saving}>Simpan Jadwal</Button>
+        <div className="pt-2">
+          <Button onClick={saveCron} loading={saving}>Simpan Semua Jadwal</Button>
         </div>
       </CardContent>
     </Card>
