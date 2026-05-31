@@ -91,6 +91,19 @@ function GradeDonut({ dist }: { dist: { A: number; B: number; C: number; Reject:
   );
 }
 
+// ─── Smooth bezier path (stock-chart style) ──────────────────────
+function smoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const curr = pts[i];
+    const cpX = (prev.x + curr.x) / 2;
+    d += ` C ${cpX.toFixed(2)} ${prev.y.toFixed(2)} ${cpX.toFixed(2)} ${curr.y.toFixed(2)} ${curr.x.toFixed(2)} ${curr.y.toFixed(2)}`;
+  }
+  return d;
+}
+
 // ─── Daily trend SVG line chart ──────────────────────────────────
 function TrendChart({ trend }: { trend: Array<{ date: string; approved: number; rejected: number; total: number }> }) {
   if (!trend?.length) return null;
@@ -99,35 +112,49 @@ function TrendChart({ trend }: { trend: Array<{ date: string; approved: number; 
   const pad = { t: 8, r: 8, b: 20, l: 24 };
   const innerW = W - pad.l - pad.r;
   const innerH = H - pad.t - pad.b;
+  const baseY = pad.t + innerH;
 
   const maxY = Math.max(...trend.map((d) => d.total), 1);
   const toX = (i: number) => pad.l + (i / (trend.length - 1)) * innerW;
   const toY = (v: number) => pad.t + innerH - (v / maxY) * innerH;
 
-  const approvedPts = trend.map((d, i) => `${toX(i)},${toY(d.approved)}`).join(' ');
-  const rejectedPts = trend.map((d, i) => `${toX(i)},${toY(d.rejected)}`).join(' ');
-  const areaBottom = `${toX(trend.length - 1)},${pad.t + innerH} ${toX(0)},${pad.t + innerH}`;
-  const approvedArea = trend.map((d, i) => `${toX(i)},${toY(d.approved)}`).join(' ') + ' ' + areaBottom;
+  const approvedPts = trend.map((d, i) => ({ x: toX(i), y: toY(d.approved) }));
+  const rejectedPts = trend.map((d, i) => ({ x: toX(i), y: toY(d.rejected) }));
+
+  const approvedLine = smoothPath(approvedPts);
+  const rejectedLine = smoothPath(rejectedPts);
+
+  // Area under approved line
+  const areaPath = approvedLine
+    + ` L ${toX(trend.length - 1).toFixed(2)} ${baseY} L ${toX(0).toFixed(2)} ${baseY} Z`;
 
   const dayShort = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-      <line x1={pad.l} y1={pad.t} x2={pad.l} y2={pad.t + innerH} stroke="#e4e9e3" strokeWidth="0.5"/>
-      <line x1={pad.l} y1={pad.t + innerH} x2={W - pad.r} y2={pad.t + innerH} stroke="#e4e9e3" strokeWidth="0.5"/>
-      <polygon points={approvedArea} fill="#2d5c33" opacity="0.12"/>
-      <polyline points={approvedPts} fill="none" stroke="#2d5c33" strokeWidth="2"/>
-      {trend.map((d, i) => (
-        <circle key={i} cx={toX(i)} cy={toY(d.approved)} r="2.5" fill="#2d5c33"/>
+      <line x1={pad.l} y1={pad.t} x2={pad.l} y2={baseY} stroke="#e4e9e3" strokeWidth="0.5"/>
+      <line x1={pad.l} y1={baseY} x2={W - pad.r} y2={baseY} stroke="#e4e9e3" strokeWidth="0.5"/>
+
+      {/* Smooth area fill */}
+      <path d={areaPath} fill="#2d5c33" opacity="0.12"/>
+
+      {/* Smooth approved line */}
+      <path d={approvedLine} fill="none" stroke="#2d5c33" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {approvedPts.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#2d5c33"/>
       ))}
-      <polyline points={rejectedPts} fill="none" stroke="#e24b4a" strokeWidth="1.5" strokeDasharray="4 2"/>
+
+      {/* Smooth rejected line */}
+      <path d={rejectedLine} fill="none" stroke="#e24b4a" strokeWidth="1.5" strokeDasharray="4 2" strokeLinecap="round"/>
+
+      {/* X-axis labels */}
       {trend.map((d, i) => (
         <text key={i} x={toX(i)} y={H - 4} textAnchor="middle" fontSize="7" fill="#7a8c79" fontFamily="Poppins,sans-serif">
           {dayShort[new Date(d.date + 'T00:00:00').getDay()]}
         </text>
       ))}
       <text x={pad.l - 2} y={pad.t + 4} textAnchor="end" fontSize="7" fill="#7a8c79">{maxY}</text>
-      <text x={pad.l - 2} y={pad.t + innerH} textAnchor="end" fontSize="7" fill="#7a8c79">0</text>
+      <text x={pad.l - 2} y={baseY} textAnchor="end" fontSize="7" fill="#7a8c79">0</text>
     </svg>
   );
 }
