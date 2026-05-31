@@ -59,7 +59,7 @@ async def load_model():
 
 class DetectRequest(BaseModel):
     image_b64: str
-    conf: float = 0.20          # threshold webcam real-world (training data lebih bersih)
+    conf: float = 0.10          # threshold webcam real-world dengan background bebas
 
 
 class BBox(BaseModel):

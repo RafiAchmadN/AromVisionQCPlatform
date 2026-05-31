@@ -228,7 +228,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         const res = await fetch('/api/yolo/detect', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ image_b64: b64, conf: 0.20 }),
+          body:    JSON.stringify({ image_b64: b64, conf: 0.10 }),
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
