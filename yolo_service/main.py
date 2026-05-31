@@ -195,19 +195,26 @@ async def health():
 @app.get("/test-detect")
 async def test_detect():
     """Diagnosa: jalankan inference pada gambar sintetis 100x100 merah."""
+    import numpy as _np
+    import torch as _torch
+    diag = {
+        "numpy_version": _np.__version__,
+        "torch_version": _torch.__version__,
+        "numpy_importable": True,
+    }
     if model is None:
-        return {"ok": False, "error": "model not loaded"}
+        return {"ok": False, "error": "model not loaded", **diag}
     try:
-        img = np.zeros((100, 100, 3), dtype=np.uint8)
-        img[:] = (40, 40, 180)  # BGR merah
+        img = _np.zeros((100, 100, 3), dtype=_np.uint8)
+        img[:] = (40, 40, 180)
         t0 = time.perf_counter()
         results = model.predict(img, conf=0.05, verbose=False)
         ms = (time.perf_counter() - t0) * 1000
         n = sum(len(r.boxes) for r in results)
-        return {"ok": True, "inference_ms": round(ms, 1), "detections": n}
+        return {"ok": True, "inference_ms": round(ms, 1), "detections": n, **diag}
     except Exception as exc:
         import traceback
-        return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
+        return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()[-600:], **diag}
 
 
 @app.get("/classes")
