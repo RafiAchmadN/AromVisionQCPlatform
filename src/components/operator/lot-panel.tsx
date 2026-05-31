@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 import type { LiveSessionAggregate } from '@/lib/types';
 
 const PRODUCT_TYPES = [
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onSessionEnd }: Props) {
+  const { t, lang } = useLanguage();
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
   const [autoApproved, setAutoApproved] = useState(false);
@@ -180,10 +182,10 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
     return (
       <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
         <div className="flex items-center gap-2 pb-2 border-b border-brand-100">
-          <h2 className="text-base font-semibold text-gray-800">Inspeksi Selesai</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t('lot.inspectionDone')}</h2>
           {autoApproved
             ? <Badge variant="success">Auto-Approved</Badge>
-            : <Badge variant="warning">Menunggu Review Manager</Badge>
+            : <Badge variant="warning">{t('lot.awaitingReview')}</Badge>
           }
         </div>
 
@@ -193,16 +195,13 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
             <div className="w-12 h-12 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center text-2xl">
               ✓
             </div>
-            <p className="text-sm font-bold text-green-700">Batch Disetujui Otomatis</p>
-            <p className="text-xs text-green-600">
-              Kualitas prima terdeteksi — batch ini melewati threshold auto-approval
-              (Confidence ≥ 95% &amp; Rot ≤ 5%). Tidak perlu review manual.
-            </p>
+            <p className="text-sm font-bold text-green-700">{t('lot.autoApproved')}</p>
+            <p className="text-xs text-green-600">{t('lot.autoApprovedDesc')}</p>
             <p className="text-xs text-gray-400 font-mono mt-1">{activeLotCode}</p>
           </div>
         ) : (
           <div className={`rounded-xl border-2 p-5 flex flex-col items-center gap-2 ${GRADE_BG[grade] ?? 'bg-gray-50 border-gray-200'}`}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Estimasi Grade</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">{t('lot.estimatedGrade')}</p>
             <p className={`text-6xl font-black ${GRADE_COLORS[grade] ?? 'text-gray-900'}`}>{grade}</p>
             <p className="text-xs text-gray-500 font-mono">{activeLotCode}</p>
           </div>
@@ -210,20 +209,20 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
 
         {aggregate && (
           <div className="grid grid-cols-2 gap-3">
-            <StatBox label="Total Terpindai" value={aggregate.total_objects_scanned} />
+            <StatBox label={t('lot.totalScanned')} value={aggregate.total_objects_scanned} />
             <StatBox label="Pass" value={aggregate.pass_count} color="text-green-700" />
             <StatBox label="Fail" value={aggregate.fail_count} color="text-red-700" />
-            <StatBox label="Avg Confidence" value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`}
+            <StatBox label={t('rpt.avgConf')} value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`}
               color={aggregate.avg_confidence >= 0.95 ? 'text-green-700' : 'text-gray-900'} />
-            <StatBox label="Avg Rot Level" value={`${aggregate.avg_rot_level.toFixed(1)}%`}
+            <StatBox label={t('rpt.avgRot')} value={`${aggregate.avg_rot_level.toFixed(1)}%`}
               color={aggregate.avg_rot_level <= 5 ? 'text-green-700' : aggregate.avg_rot_level > 40 ? 'text-red-700' : 'text-amber-700'} />
-            <StatBox label="Avg Anomaly" value={aggregate.avg_anomaly_score.toFixed(3)} />
+            <StatBox label={lang === 'en' ? 'Avg Anomaly' : 'Avg Anomaly'} value={aggregate.avg_anomaly_score.toFixed(3)} />
           </div>
         )}
 
         {aggregate && Object.keys(aggregate.defect_distribution ?? {}).length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-xs">Distribusi Defek</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-xs">{t('lot.defectDist')}</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-1.5 pt-0">
               {Object.entries(aggregate.defect_distribution).map(([defect, count]) => (
                 <div key={defect} className="flex items-center justify-between">
@@ -237,13 +236,12 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
 
         {!autoApproved && (
           <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
-            Lot <span className="font-mono font-semibold">{activeLotCode}</span> sudah dikirim ke antrian review Manager.
-            Anda akan mendapat notifikasi setelah keputusan dibuat.
+            Lot <span className="font-mono font-semibold">{activeLotCode}</span> {t('lot.sentToManager')}
           </div>
         )}
 
         <Button onClick={startNew} className="w-full mt-1">
-          Mulai Inspeksi Baru
+          {t('lot.startNew')}
         </Button>
       </div>
     );
@@ -255,7 +253,7 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
       <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
         <div className="flex items-center justify-between pb-2 border-b border-brand-100">
           <div>
-            <h2 className="text-base font-semibold text-gray-800">Inspeksi Berlangsung</h2>
+            <h2 className="text-base font-semibold text-gray-800">{t('lot.inspectionActive')}</h2>
             <p className="text-xs text-gray-400 font-mono mt-0.5">{activeLotCode}</p>
           </div>
           <Badge variant="success" className="animate-pulse">● Live</Badge>
@@ -264,13 +262,13 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
         {aggregate && (
           <div className={`rounded-xl border-2 px-4 py-3 flex items-center justify-between ${GRADE_BG[aggregate.estimated_grade] ?? 'bg-gray-50 border-gray-200'}`}>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest">Estimasi Grade Saat Ini</p>
+              <p className="text-xs text-gray-500 uppercase tracking-widest">{t('lot.currentGrade')}</p>
               <p className={`text-4xl font-black mt-0.5 ${GRADE_COLORS[aggregate.estimated_grade] ?? 'text-gray-900'}`}>
                 {aggregate.estimated_grade}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500">Terpindai</p>
+              <p className="text-xs text-gray-500">{t('lot.scanned')}</p>
               <p className="text-2xl font-bold text-gray-800">{aggregate.total_objects_scanned}</p>
             </div>
           </div>
@@ -280,15 +278,15 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
           <div className="grid grid-cols-2 gap-3">
             <StatBox label="Pass" value={aggregate.pass_count} color="text-green-700" />
             <StatBox label="Fail" value={aggregate.fail_count} color="text-red-700" />
-            <StatBox label="Avg Confidence" value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`} />
-            <StatBox label="Avg Rot Level" value={`${aggregate.avg_rot_level.toFixed(1)}%`} />
+            <StatBox label={t('rpt.avgConf')} value={`${(aggregate.avg_confidence * 100).toFixed(1)}%`} />
+            <StatBox label={t('rpt.avgRot')} value={`${aggregate.avg_rot_level.toFixed(1)}%`} />
             <StatBox label="Avg Anomaly" value={aggregate.avg_anomaly_score.toFixed(3)} />
             <StatBox
-              label="Status"
+              label={t('common.status')}
               value={
-                aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20 ? 'Baik'
-                : aggregate.avg_confidence >= 0.6 ? 'Perlu Perhatian'
-                : 'Kritis'
+                aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20 ? t('lot.statusGood')
+                : aggregate.avg_confidence >= 0.6 ? t('lot.statusWarning')
+                : t('lot.statusCritical')
               }
               color={
                 aggregate.avg_confidence >= 0.8 && aggregate.avg_rot_level < 20 ? 'text-green-700'
@@ -301,7 +299,7 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
 
         {aggregate && Object.keys(aggregate.defect_distribution ?? {}).length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-xs">Log Defek Terdeteksi</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-xs">{t('lot.defectLog')}</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-1.5 pt-0">
               {Object.entries(aggregate.defect_distribution)
                 .sort(([, a], [, b]) => b - a)
@@ -326,12 +324,9 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
         {errors._global && <p className="text-xs text-red-600">{errors._global}</p>}
 
         <div className="mt-auto pt-2 border-t border-brand-100">
-          <p className="text-xs text-gray-400 mb-2">
-            Klik tombol di bawah setelah semua bahan selesai diinspeksi.
-            Lot akan dikirim ke Manager untuk review.
-          </p>
+          <p className="text-xs text-gray-400 mb-2">{t('lot.sendHint')}</p>
           <Button onClick={endInspection} loading={endLoading} className="w-full" variant="default">
-            Selesai Inspeksi → Kirim ke Manager
+            {t('lot.endSession')}
           </Button>
         </div>
       </div>
@@ -343,31 +338,31 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-4">
       <div className="flex items-center gap-2 pb-2 border-b border-brand-100 bg-gradient-to-r from-brand-50 to-white -mx-4 px-4 pt-1">
         <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
-        <h2 className="text-base font-semibold text-gray-800">Inisialisasi Lot</h2>
+        <h2 className="text-base font-semibold text-gray-800">{t('lot.init')}</h2>
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-sm">Form Lot Baru</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">{t('lot.newForm')}</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <Select
-              label="Jenis Bahan/Produk"
+              label={t('lot.productType')}
               options={PRODUCT_TYPES}
               value={form.product_type}
               onChange={(e) => setField('product_type', e.target.value)}
-              placeholder="Pilih jenis..."
+              placeholder={t('lot.selectType')}
               error={errors.product_type}
               required
             />
             <Input
-              label="Nama/Kode Batch"
+              label={t('lot.batchCode')}
               value={form.batch_name}
               onChange={(e) => setField('batch_name', e.target.value)}
-              placeholder="Contoh: BATCH-2026-001"
+              placeholder="BATCH-2026-001"
               error={errors.batch_name}
               required
             />
             <Input
-              label="Estimasi Jumlah Unit"
+              label={t('lot.estimatedUnits')}
               type="number"
               min={1}
               value={form.estimated_units}
@@ -377,7 +372,7 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
               required
             />
             <Input
-              label="Tanggal Produksi"
+              label={t('lot.productionDate')}
               type="date"
               value={form.production_date}
               onChange={(e) => setField('production_date', e.target.value)}
@@ -385,16 +380,16 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
               required
             />
             <Select
-              label="Shift"
+              label={t('lot.shift')}
               options={SHIFT_OPTIONS}
               value={form.shift}
               onChange={(e) => setField('shift', e.target.value)}
               required
             />
-            <Input label="Nama Operator" value={operatorName} readOnly className="bg-gray-50 cursor-not-allowed" />
+            <Input label={t('lot.operatorName')} value={operatorName} readOnly className="bg-gray-50 cursor-not-allowed" />
             {errors._global && <p className="text-xs text-red-600">{errors._global}</p>}
             <Button type="submit" loading={loading} className="w-full mt-1">
-              Mulai Sesi Inspeksi
+              {t('lot.startSession')}
             </Button>
           </form>
         </CardContent>

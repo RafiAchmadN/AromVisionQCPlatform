@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { bboxColor, rotCategory } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 import type { ActiveSession } from './workspace';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -129,6 +130,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [yoloError, setYoloError]       = useState<string | null>(null);
   const consecutiveEmptyRef = useRef(0);
+  const { t, lang } = useLanguage();
 
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
@@ -352,10 +354,10 @@ export function OperatorCameraPanel({ activeSession }: Props) {
 
   // ─── Derived badge info ─────────────────────────────────────────────────────
   const yoloBadge = {
-    checking:  { label: 'Memeriksa AI...', variant: 'secondary' as const },
-    online:    { label: 'YOLO Online',     variant: 'success'   as const },
-    'no-model':{ label: 'Model Belum Ada', variant: 'warning'   as const },
-    offline:   { label: 'AI Offline',      variant: 'secondary' as const },
+    checking:  { label: t('common.loading'),  variant: 'secondary' as const },
+    online:    { label: t('cam.yoloOnline'),  variant: 'success'   as const },
+    'no-model':{ label: 'Model Belum Ada',    variant: 'warning'   as const },
+    offline:   { label: t('cam.yoloOffline'), variant: 'secondary' as const },
   }[yoloStatus];
 
   const canStartInspection = mode === 'inspection' && yoloStatus === 'online';
@@ -367,7 +369,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       <div className="flex items-center justify-between px-4 py-2 border-b border-brand-100 bg-gradient-to-r from-brand-50 to-white">
         <div className="flex items-center gap-2">
           <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
-          <h2 className="text-base font-semibold text-gray-800">Live Camera & QC Monitor</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t('cam.title')}</h2>
         </div>
         <div className="flex items-center gap-2">
           {/* Mode toggle */}
@@ -377,18 +379,18 @@ export function OperatorCameraPanel({ activeSession }: Props) {
               onClick={() => { setMode('simulation'); if (cameraOn) stopCamera(); else { const c = canvasRef.current; c?.getContext('2d')?.clearRect(0,0,c.width,c.height); } setDetections([]); }}
               className={`px-2.5 py-1 transition-colors ${mode === 'simulation' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}
             >
-              Simulasi
+              {t('cam.simulation')}
             </button>
             <button
               type="button"
               onClick={() => { setMode('inspection'); if (cameraOn) stopCamera(); else { const c = canvasRef.current; c?.getContext('2d')?.clearRect(0,0,c.width,c.height); } setDetections([]); }}
               className={`px-2.5 py-1 transition-colors ${mode === 'inspection' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}
             >
-              Inspeksi
+              {t('cam.inspection')}
             </button>
           </div>
           <Badge variant={yoloBadge.variant}>{yoloBadge.label}</Badge>
-          <Badge variant={cameraOn ? 'success' : 'secondary'}>{cameraOn ? 'Live' : 'Standby'}</Badge>
+          <Badge variant={cameraOn ? 'success' : 'secondary'}>{cameraOn ? t('cam.live') : 'Standby'}</Badge>
         </div>
       </div>
 
@@ -400,7 +402,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white bg-black/70">
             {error
               ? <p className="text-sm text-red-400 text-center px-6">{error}</p>
-              : <p className="text-sm text-gray-300">Klik tombol di bawah untuk mengaktifkan kamera</p>
+              : <p className="text-sm text-gray-300">{t('cam.waitingYolo')}</p>
             }
           </div>
         )}
@@ -409,7 +411,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
             {isProcessing && (
               <div className="flex items-center gap-1.5 bg-black/60 text-white text-xs px-2 py-1 rounded font-mono">
                 <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                Mendeteksi...
+                {t('cam.detecting')}
               </div>
             )}
             {!isProcessing && inferenceMs !== null && (
@@ -424,20 +426,20 @@ export function OperatorCameraPanel({ activeSession }: Props) {
             )}
             {!isProcessing && !yoloError && consecutiveEmptyRef.current >= 3 && (
               <div className="bg-black/60 text-yellow-300 text-[10px] px-2 py-1 rounded max-w-[180px] text-right leading-tight">
-                Tidak ada deteksi — arahkan buah lebih dekat ke kamera
+                {t('cam.noDetect')}
               </div>
             )}
           </div>
         )}
         {cameraOn && (
           <div className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded font-semibold ${mode === 'simulation' ? 'bg-yellow-600/80' : 'bg-green-700/80'}`}>
-            {mode === 'simulation' ? 'SIMULASI' : 'INSPEKSI'}
+            {mode === 'simulation' ? t('cam.simulation').toUpperCase() : t('cam.inspection').toUpperCase()}
           </div>
         )}
         {/* Frame counter */}
         {cameraOn && activeSession && (
           <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded font-mono">
-            {savedCount} frame tersimpan
+            {savedCount} frame{lang === 'en' ? 's saved' : ' tersimpan'}
           </div>
         )}
       </div>
@@ -467,41 +469,41 @@ export function OperatorCameraPanel({ activeSession }: Props) {
             className="shrink-0"
             disabled={mode === 'inspection' && !canStartInspection && !canStartSimulation}
           >
-            {mode === 'inspection' ? 'Mulai Inspeksi' : 'Aktifkan Kamera'}
+            {mode === 'inspection' ? t('cam.inspection') : t('cam.enableCam')}
           </Button>
         ) : (
           <Button size="sm" variant="destructive" onClick={stopCamera} className="shrink-0">
-            Matikan Kamera
+            {t('cam.disableCam')}
           </Button>
         )}
         {!activeSession && (
-          <span className="text-xs text-amber-600 font-medium">← Buat lot dulu</span>
+          <span className="text-xs text-amber-600 font-medium">{t('cam.startLot')}</span>
         )}
       </div>
 
       {/* ── Real-time indicators ── */}
       <div className="grid grid-cols-2 gap-2 p-3 bg-[#e8f2e8] shrink-0">
         <IndicatorCard
-          label="Rot Level"
+          label={t('cam.rotLevel')}
           value={`${indicators.rot_level.toFixed(1)}%`}
           sub={rotCategory(indicators.rot_level)}
           color={indicators.rot_level < 15 ? 'text-green-700' : indicators.rot_level < 40 ? 'text-yellow-700' : 'text-red-700'}
         />
         <IndicatorCard
-          label="Confidence"
+          label={t('cam.confidence')}
           value={`${(indicators.confidence * 100).toFixed(1)}%`}
-          sub={indicators.confidence >= 0.8 ? 'Tinggi' : indicators.confidence >= 0.6 ? 'Sedang' : 'Rendah'}
+          sub={indicators.confidence >= 0.8 ? t('cam.high') : indicators.confidence >= 0.6 ? t('cam.medium') : t('cam.low')}
           color={indicators.confidence >= 0.8 ? 'text-green-700' : indicators.confidence >= 0.6 ? 'text-yellow-700' : 'text-red-700'}
         />
         <IndicatorCard
-          label="Anomaly Score"
+          label={t('cam.anomaly')}
           value={indicators.anomaly_score.toFixed(3)}
-          sub={indicators.anomaly_score > 0.8 ? 'Kritis' : indicators.anomaly_score > 0.5 ? 'Waspada' : 'Normal'}
+          sub={indicators.anomaly_score > 0.8 ? (lang === 'en' ? 'Critical' : 'Kritis') : indicators.anomaly_score > 0.5 ? (lang === 'en' ? 'Caution' : 'Waspada') : t('cam.normal')}
           color={indicators.anomaly_score > 0.8 ? 'text-red-700' : indicators.anomaly_score > 0.5 ? 'text-yellow-700' : 'text-green-700'}
         />
         <IndicatorCard
-          label="Defect"
-          value={`${indicators.defect_count} cacat`}
+          label={t('cam.defect')}
+          value={`${indicators.defect_count} ${t('cam.defects')}`}
           sub={indicators.defect_severity}
           color={indicators.defect_severity === 'Severe' ? 'text-red-700' : indicators.defect_severity === 'Moderate' ? 'text-yellow-700' : 'text-gray-700'}
         />

@@ -4,20 +4,23 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Users, Package, FileText, Settings, ScrollText, Bell, LogOut } from 'lucide-react';
 import { NotifBadge } from '@/components/shared/notif-badge';
+import { useLanguage } from '@/contexts/language-context';
+import type { TranslationKey } from '@/lib/i18n';
 
-const NAV_ITEMS = [
-  { href: '/admin/dashboard',     label: 'Dashboard',   icon: LayoutDashboard, badge: false },
-  { href: '/admin/users',         label: 'Pengguna',    icon: Users,           badge: false },
-  { href: '/admin/lots',          label: 'Lot',         icon: Package,         badge: false },
-  { href: '/admin/reports',       label: 'Laporan',     icon: FileText,        badge: false },
-  { href: '/admin/config',        label: 'Konfigurasi', icon: Settings,        badge: false },
-  { href: '/admin/audit',         label: 'Audit Log',   icon: ScrollText,      badge: false },
-  { href: '/admin/notifications', label: 'Notifikasi',  icon: Bell,            badge: true  },
+const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: React.ElementType; badge: boolean }[] = [
+  { href: '/admin/dashboard',     labelKey: 'nav.dashboard',     icon: LayoutDashboard, badge: false },
+  { href: '/admin/users',         labelKey: 'nav.users',         icon: Users,           badge: false },
+  { href: '/admin/lots',          labelKey: 'nav.lots',          icon: Package,         badge: false },
+  { href: '/admin/reports',       labelKey: 'nav.reports',       icon: FileText,        badge: false },
+  { href: '/admin/config',        labelKey: 'nav.config',        icon: Settings,        badge: false },
+  { href: '/admin/audit',         labelKey: 'nav.audit',         icon: ScrollText,      badge: false },
+  { href: '/admin/notifications', labelKey: 'nav.notifications', icon: Bell,            badge: true  },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { t }    = useLanguage();
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -52,7 +55,7 @@ export function AdminSidebar() {
                 'h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110',
                 active ? 'text-brand-300' : 'group-hover:text-brand-300'
               )} />
-              {item.label}
+              {t(item.labelKey)}
               {item.badge && <NotifBadge />}
             </Link>
           );
@@ -64,7 +67,7 @@ export function AdminSidebar() {
           className="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400/80 hover:text-red-300 hover:bg-red-900/20 transition-all duration-200 w-full text-left hover:translate-x-1"
         >
           <LogOut className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110" />
-          Keluar
+          {t('nav.logout')}
         </button>
       </nav>
 

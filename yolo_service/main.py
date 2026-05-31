@@ -128,11 +128,13 @@ def _build_detection(
     is_fresh: bool = mapping["is_fresh"]
     obj_class: str = mapping["object_class"]
 
-    # rot_level: segar → 0-15 %, busuk → 45-95 %
+    # rot_level: confidence-proportional — low confidence means uncertain, not severely rotten
+    # fresh:  conf=0.90 → 2%,  conf=0.50 → 10%, conf=0.10 → 18%
+    # rotten: conf=0.10 → 9%,  conf=0.50 → 45%, conf=0.90 → 81%
     if is_fresh:
         rot_level = max(0.0, (1.0 - conf) * 20.0)
     else:
-        rot_level = 45.0 + conf * 50.0
+        rot_level = conf * 90.0
 
     # color_category
     if rot_level < 15:

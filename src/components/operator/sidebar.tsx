@@ -4,15 +4,18 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Bell, LogOut } from 'lucide-react';
 import { NotifBadge } from '@/components/shared/notif-badge';
+import { useLanguage } from '@/contexts/language-context';
+import type { TranslationKey } from '@/lib/i18n';
 
-const NAV_ITEMS = [
-  { href: '/operator/dashboard',     label: 'Dashboard', icon: LayoutDashboard, badge: false },
-  { href: '/operator/notifications', label: 'Notifikasi',icon: Bell,            badge: true  },
+const NAV_ITEMS: { href: string; labelKey: TranslationKey; icon: React.ElementType; badge: boolean }[] = [
+  { href: '/operator/dashboard',     labelKey: 'nav.dashboard',     icon: LayoutDashboard, badge: false },
+  { href: '/operator/notifications', labelKey: 'nav.notifications', icon: Bell,            badge: true  },
 ];
 
 export function OperatorSidebar() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { t }    = useLanguage();
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -44,7 +47,7 @@ export function OperatorSidebar() {
               )}
             >
               <Icon className={cn('h-[15px] w-[15px] shrink-0', active && 'text-brand-300')} />
-              {item.label}
+              {t(item.labelKey)}
               {item.badge && <NotifBadge />}
             </Link>
           );
@@ -56,7 +59,7 @@ export function OperatorSidebar() {
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-400/80 hover:text-red-300 hover:bg-red-900/20 transition-all duration-200 w-full text-left"
         >
           <LogOut className="h-[15px] w-[15px] shrink-0" />
-          Keluar
+          {t('nav.logout')}
         </button>
       </nav>
 

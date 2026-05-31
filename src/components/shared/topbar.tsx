@@ -3,12 +3,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { NotificationBell } from './notification-bell';
+import { useLanguage } from '@/contexts/language-context';
 import type { User } from '@/lib/types';
 
 interface TopbarProps { user: User; }
 
 export function Topbar({ user }: TopbarProps) {
   const router = useRouter();
+  const { lang, toggle } = useLanguage();
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -39,6 +41,18 @@ export function Topbar({ user }: TopbarProps) {
           </span>
           <span className="text-[11px] text-brand-400 font-medium">AI Online</span>
         </div>
+
+        {/* Language toggle */}
+        <button
+          type="button"
+          onClick={toggle}
+          className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md border border-brand-700/60 bg-white/5 hover:bg-white/10 transition-all duration-200 text-[11px] font-semibold text-brand-400 hover:text-brand-200"
+          aria-label="Toggle language"
+        >
+          <span className={lang === 'id' ? 'text-brand-200' : 'text-brand-600'}>ID</span>
+          <span className="text-brand-700">|</span>
+          <span className={lang === 'en' ? 'text-brand-200' : 'text-brand-600'}>EN</span>
+        </button>
 
         <NotificationBell />
 
