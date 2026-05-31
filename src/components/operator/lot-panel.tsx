@@ -16,7 +16,6 @@ const PRODUCT_TYPES = [
   { value: 'anggur',      label: 'Anggur' },
   { value: 'lemon',       label: 'Lemon' },
   { value: 'stroberi',    label: 'Stroberi' },
-  { value: 'bolazakar',   label: 'Bolazakar' },
   { value: 'leci',        label: 'Leci' },
   { value: 'blackberry',  label: 'Blackberry' },
   { value: 'bilberry',    label: 'Bilberry' },
