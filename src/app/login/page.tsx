@@ -8,6 +8,9 @@ import { Eye, EyeOff } from 'lucide-react';
 // ─── Floating Particle ────────────────────────────────────────────────────────
 interface Particle { x: number; y: number; size: number; speed: number; opacity: number; drift: number; phase: number; }
 
+const CANVAS_SIZE = 340;
+const PARTICLE_RADIUS = 140;
+
 function ParticleField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -17,25 +20,28 @@ function ParticleField() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => {
-      // fallback ke parent atau window jika offsetWidth masih 0 saat mount
-      canvas.width  = canvas.offsetWidth  || canvas.parentElement?.offsetWidth  || window.innerWidth  / 2;
-      canvas.height = canvas.offsetHeight || canvas.parentElement?.offsetHeight || window.innerHeight;
-    };
-    // Delay resize sekali agar layout sudah terhitung
-    resize();
-    const t = setTimeout(resize, 50);
-    window.addEventListener('resize', resize);
+    canvas.width  = CANVAS_SIZE;
+    canvas.height = CANVAS_SIZE;
+    const CX = CANVAS_SIZE / 2;
+    const CY = CANVAS_SIZE / 2;
 
-    const particles: Particle[] = Array.from({ length: 35 }, () => ({
-      x: Math.random() * (canvas.width  || 600),
-      y: Math.random() * (canvas.height || 800),
-      size: 1.5 + Math.random() * 3,
-      speed: 0.2 + Math.random() * 0.4,
-      opacity: 0.15 + Math.random() * 0.35,
-      drift: (Math.random() - 0.5) * 0.3,
-      phase: Math.random() * Math.PI * 2,
-    }));
+    function spawnInCircle() {
+      const angle = Math.random() * Math.PI * 2;
+      const r     = Math.sqrt(Math.random()) * PARTICLE_RADIUS;
+      return { x: CX + r * Math.cos(angle), y: CY + r * Math.sin(angle) };
+    }
+
+    const particles: Particle[] = Array.from({ length: 28 }, () => {
+      const pos = spawnInCircle();
+      return {
+        x: pos.x, y: pos.y,
+        size: 1.5 + Math.random() * 2.5,
+        speed: 0.15 + Math.random() * 0.35,
+        opacity: 0.15 + Math.random() * 0.35,
+        drift: (Math.random() - 0.5) * 0.25,
+        phase: Math.random() * Math.PI * 2,
+      };
+    });
 
     let frame = 0;
     let raf: number;
@@ -48,9 +54,15 @@ function ParticleField() {
       for (const p of particles) {
         p.y -= p.speed;
         p.x += p.drift + Math.sin(frame * 0.01 + p.phase) * 0.3;
-        if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
-        if (p.x < -10) p.x = canvas.width + 10;
-        if (p.x > canvas.width + 10) p.x = -10;
+
+        // Respawn inside circle when particle exits the radius
+        const dx = p.x - CX;
+        const dy = p.y - CY;
+        if (Math.sqrt(dx * dx + dy * dy) > PARTICLE_RADIUS) {
+          const pos = spawnInCircle();
+          p.x = pos.x;
+          p.y = pos.y;
+        }
 
         const pulse = 0.7 + 0.3 * Math.sin(frame * 0.02 + p.phase);
         ctx.beginPath();
@@ -58,7 +70,6 @@ function ParticleField() {
         ctx.fillStyle = `rgba(114,194,120,${p.opacity * pulse})`;
         ctx.fill();
 
-        // Inner glow dot
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * 0.4 * pulse, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(200,240,200,${p.opacity})`;
@@ -67,10 +78,23 @@ function ParticleField() {
       raf = requestAnimationFrame(draw);
     }
     draw();
-    return () => { clearTimeout(t); window.removeEventListener('resize', resize); cancelAnimationFrame(raf); };
+    return () => { cancelAnimationFrame(raf); };
   }, []);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute pointer-events-none"
+      style={{
+        width:  CANVAS_SIZE,
+        height: CANVAS_SIZE,
+        top:    '50%',
+        left:   '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 0,
+      }}
+    />
+  );
 }
 
 // ─── 3D Tilt Card ─────────────────────────────────────────────────────────────
