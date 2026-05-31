@@ -16,7 +16,8 @@ RUN pip install --no-cache-dir \
 # Install dependensi lain
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir "opencv-python-headless==4.10.0.84" --force-reinstall
+    pip install --no-cache-dir "opencv-python-headless==4.10.0.84" --force-reinstall && \
+    pip install --no-cache-dir "numpy==1.26.4" --force-reinstall
 
 # Copy source code dan model
 COPY . .
