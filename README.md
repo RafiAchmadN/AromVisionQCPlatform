@@ -4,10 +4,6 @@
 
 Built for **CyberHack 2026** · Co-organised with UKM Cyber Security ITS · Sponsored by Xtremax, AWS, BuildPad
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-BuildPad%20%2F%20AWS%20Amplify-orange)](https://main.d1cao7uhcec3x9.amplifyapp.com)
-[![YOLO Service](https://img.shields.io/badge/YOLO%20Service-Railway-purple)](https://aromvisionqcplatform-production.up.railway.app/health)
-[![GitHub](https://img.shields.io/badge/GitHub-Public-blue)](https://github.com/RafiAchmadN/AromVisionQCPlatform)
-
 ---
 
 ## The Problem
@@ -143,13 +139,6 @@ Most QC hackathon submissions implement one thing — a detection model, or a da
 | Scheduling | node-cron (daily/weekly/monthly reports) |
 
 ---
-
-## Live Demo
-
-**Frontend**: [https://main.d1cao7uhcec3x9.amplifyapp.com](https://main.d1cao7uhcec3x9.amplifyapp.com)
-*(Deployed on BuildPad / AWS Amplify)*
-
-**YOLO Health**: [https://aromvisionqcplatform-production.up.railway.app/health](https://aromvisionqcplatform-production.up.railway.app/health)
 
 ### Demo Credentials
 
