@@ -4,12 +4,14 @@ import { getServerSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { makeApiError } from '@/lib/utils';
 
+const GROQ_KEY = process.env.GROQ_API_KEY ?? process.env.NEXT_PUBLIC_GROQ_API_KEY ?? '';
+
 export async function POST(request: NextRequest) {
   const user = await getServerSession();
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
   if (user.role === 'Operator') return makeApiError(403, 'FORBIDDEN', 'Access denied');
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!GROQ_KEY) {
     return makeApiError(503, 'AI_UNAVAILABLE', 'GROQ_API_KEY not configured');
   }
 
@@ -93,7 +95,7 @@ Write 2–4 sentences that:
 Use professional manufacturing and supply chain language appropriate for ISO 9001 documentation. Be direct and specific.`;
 
   try {
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const groq = new Groq({ apiKey: GROQ_KEY });
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       max_tokens: 300,
