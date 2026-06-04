@@ -10,8 +10,8 @@ frontend:
         - echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> .env.production
         - echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env.production
         - echo "NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL" >> .env.production
-        - echo "GROQ_API_KEY=$GROQ_API_KEY" >> .env.production
-        - echo "NEXT_PUBLIC_GROQ_API_KEY=$GROQ_API_KEY" >> .env.production
+        - echo "GROQ_API_KEY=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" >> .env.production
+        - echo "NEXT_PUBLIC_GROQ_API_KEY=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" >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
