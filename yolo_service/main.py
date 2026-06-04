@@ -74,11 +74,36 @@ async def load_model():
         model = await loop.run_in_executor(_executor, _load_yolo)
 
 
+# ── Product → Roboflow class keyword mapping ─────────────────────────────────
+# Only fruits/vegetables that exist in the Roboflow dataset
+# Products NOT listed here → no filter applied (show all detections)
+PRODUCT_TO_KEYWORD: dict[str, str] = {
+    "pisang":   "banana",
+    "apel":     "apple",
+    "jeruk":    "orange",
+    "tomat":    "tomato",
+    "kentang":  "potato",
+    "timun":    "cucumber",
+}
+
+
+def _should_keep(cls_name: str, filter_product: str | None) -> bool:
+    """Return True if this detection class matches the selected product type."""
+    if not filter_product:
+        return True
+    keyword = PRODUCT_TO_KEYWORD.get(filter_product.lower())
+    if not keyword:
+        # product not in Roboflow dataset (e.g. buah_naga) — keep all detections
+        return True
+    return keyword in cls_name.lower()
+
+
 # ── Schema ────────────────────────────────────────────────────────────────────
 
 class DetectRequest(BaseModel):
-    image_b64: str
-    conf: float = 0.10
+    image_b64:      str
+    conf:           float = 0.10
+    filter_product: str | None = None   # e.g. "pisang", "apel", "jeruk"
 
 
 class BBox(BaseModel):
@@ -181,7 +206,7 @@ def _build_detection(
 
 # ── Roboflow inference ────────────────────────────────────────────────────────
 
-async def _roboflow_detect(image_b64: str, conf: float) -> tuple[list[Detection], float, int, int]:
+async def _roboflow_detect(image_b64: str, conf: float, filter_product: str | None = None) -> tuple[list[Detection], float, int, int]:
     """Call Roboflow Hosted API, return (detections, inference_ms, frame_w, frame_h)."""
     conf_pct = max(1, int(conf * 100))  # Roboflow uses 1–100
 
@@ -204,7 +229,9 @@ async def _roboflow_detect(image_b64: str, conf: float) -> tuple[list[Detection]
 
     detections: list[Detection] = []
     for pred in data.get("predictions", []):
-        cls_name   = pred["class"]
+        cls_name = pred["class"]
+        if not _should_keep(cls_name, filter_product):
+            continue  # skip — tidak cocok dengan produk lot yang dipilih
         conf_val   = float(pred["confidence"])
         cx, cy     = float(pred["x"]),     float(pred["y"])
         pw, ph     = float(pred["width"]), float(pred["height"])
@@ -213,7 +240,8 @@ async def _roboflow_detect(image_b64: str, conf: float) -> tuple[list[Detection]
         x2, y2 = cx + pw / 2, cy + ph / 2
         detections.append(_build_detection(cls_name, conf_val, x1, y1, x2, y2))
 
-    print(f"[Roboflow] {len(detections)} detections in {inference_ms:.1f}ms", flush=True)
+    kept = len(detections)
+    print(f"[Roboflow] {kept} detections (filter={filter_product}) in {inference_ms:.1f}ms", flush=True)
     return detections, inference_ms, frame_w, frame_h
 
 
@@ -288,9 +316,9 @@ async def get_classes():
 async def detect(req: DetectRequest):
     # ── Roboflow path ──────────────────────────────────────────────────────────
     if USE_ROBOFLOW:
-        print(f"[Roboflow] Running detect, conf={req.conf}", flush=True)
+        print(f"[Roboflow] Running detect, conf={req.conf}, filter={req.filter_product}", flush=True)
         try:
-            dets, ms, fw, fh = await _roboflow_detect(req.image_b64, req.conf)
+            dets, ms, fw, fh = await _roboflow_detect(req.image_b64, req.conf, req.filter_product)
         except HTTPException:
             raise
         except Exception as exc:
@@ -322,7 +350,7 @@ async def detect(req: DetectRequest):
         raise HTTPException(400, "Gambar tidak valid atau kosong.")
 
     h, w = img.shape[:2]
-    print(f"[YOLO] Running predict on {w}x{h} image, conf={req.conf}", flush=True)
+    print(f"[YOLO] Running predict on {w}x{h} image, conf={req.conf}, filter={req.filter_product}", flush=True)
     t0 = time.perf_counter()
 
     try:

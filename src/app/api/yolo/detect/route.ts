@@ -12,7 +12,11 @@ export async function POST(request: NextRequest) {
     const res = await fetch(`${YOLO_SERVICE}/detect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_b64: body.image_b64, conf: body.conf ?? 0.45 }),
+      body: JSON.stringify({
+        image_b64:      body.image_b64,
+        conf:           body.conf ?? 0.45,
+        filter_product: body.filter_product ?? null,
+      }),
       signal: AbortSignal.timeout(15000),
     });
 

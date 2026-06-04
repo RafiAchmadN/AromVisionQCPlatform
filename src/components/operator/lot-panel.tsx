@@ -47,7 +47,7 @@ const GRADE_BG: Record<string, string> = {
 interface Props {
   operatorId: string;
   operatorName: string;
-  onSessionStart?: (lotId: string, sessionId: string, lotCode: string) => void;
+  onSessionStart?: (lotId: string, sessionId: string, lotCode: string, productType: string) => void;
   onSessionEnd?: () => void;
 }
 
@@ -102,7 +102,7 @@ export function OperatorLotPanel({ operatorId, operatorName, onSessionStart, onS
       setActiveLotId(lotId);
       setActiveLotCode(lotCode);
       setSessionActive(true);
-      onSessionStart?.(lotId, sessionId, lotCode);
+      onSessionStart?.(lotId, sessionId, lotCode, form.product_type);
     } catch {
       setErrors({ _global: 'Gagal memulai sesi. Coba lagi.' });
     } finally {

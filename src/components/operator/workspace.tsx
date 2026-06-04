@@ -7,6 +7,7 @@ export interface ActiveSession {
   lotId: string;
   sessionId: string;
   lotCode: string;
+  productType: string;
 }
 
 interface Props {
@@ -26,8 +27,8 @@ export function OperatorWorkspace({ operatorId, operatorName }: Props) {
         <OperatorLotPanel
           operatorId={operatorId}
           operatorName={operatorName}
-          onSessionStart={(lotId, sessionId, lotCode) =>
-            setActiveSession({ lotId, sessionId, lotCode })
+          onSessionStart={(lotId, sessionId, lotCode, productType) =>
+            setActiveSession({ lotId, sessionId, lotCode, productType })
           }
           onSessionEnd={() => setActiveSession(null)}
         />
