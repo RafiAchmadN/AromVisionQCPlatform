@@ -1,18 +1,16 @@
 import { NextRequest } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 import { getServerSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { makeApiError } from '@/lib/utils';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' });
 
 export async function POST(request: NextRequest) {
   const user = await getServerSession();
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
   if (user.role === 'Operator') return makeApiError(403, 'FORBIDDEN', 'Access denied');
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return makeApiError(503, 'AI_UNAVAILABLE', 'ANTHROPIC_API_KEY not configured');
+  if (!process.env.GROQ_API_KEY) {
+    return makeApiError(503, 'AI_UNAVAILABLE', 'GROQ_API_KEY not configured');
   }
 
   const body = await request.json().catch(() => null);
@@ -20,7 +18,6 @@ export async function POST(request: NextRequest) {
   if (!lotId) return makeApiError(400, 'VALIDATION_ERROR', 'lot_id required');
 
   // Fetch lot + report
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: lotRaw } = await supabaseAdmin
     .from('lots')
     .select('*, operator:operator_id(name), inspection_reports(*), decisions(*)')
@@ -48,7 +45,7 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const decision = (lot.decisions as any[])?.[0];
 
-  const histStats = (history ?? []).map((h) => {
+  const histStats = history.map((h) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const r = (h.inspection_reports as any[])?.[0];
     return {
@@ -58,9 +55,11 @@ export async function POST(request: NextRequest) {
     };
   });
 
-  const prompt = `You are a quality control expert for a natural aromatic ingredients manufacturer (SIMA Arôme, Pandaan, Indonesia) that processes fresh fruits and botanicals into essential oils and extracts. Their QC platform uses AI vision to inspect incoming raw materials.
+  const lang = body?.lang === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
 
-Analyze this inspection lot and generate a concise quality insight in ${body?.lang === 'en' ? 'English' : 'Indonesian'}:
+  const prompt = `You are a quality control expert for SIMA Arôme, a natural aromatic ingredients manufacturer in Pandaan, East Java, Indonesia. They process fresh fruits and botanicals into essential oils and extracts. Their QC platform uses AI vision to inspect incoming raw materials.
+
+Analyze this inspection lot and generate a concise quality insight in ${lang}:
 
 **Lot Info:**
 - Lot Code: ${lot.lot_code}
@@ -87,20 +86,22 @@ ${histStats.length > 0
   ? histStats.map((h, i) => `  ${i + 1}. Status: ${h.status}, Rot: ${h.avg_rot_level}%, Grade: ${h.grade}`).join('\n')
   : '  No prior data available for this product type.'}
 
-Generate a 2–4 sentence professional quality insight that:
-1. Describes the quality finding of this specific lot
-2. Compares to historical trend (if available)
-3. Gives one actionable recommendation for the QC team or procurement
-Be specific, factual, and use manufacturing/supply chain language appropriate for ISO 9001 documentation.`;
+Write 2–4 sentences that:
+1. Describe the quality finding for this specific lot
+2. Compare to the historical trend if data is available
+3. Give one actionable recommendation for the QC team or procurement department
+Use professional manufacturing and supply chain language appropriate for ISO 9001 documentation. Be direct and specific.`;
 
   try {
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 300,
+      temperature: 0.3,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const insight = (message.content[0] as { type: string; text: string }).text;
+    const insight = completion.choices[0]?.message?.content ?? '';
 
     return Response.json({
       lot_id: lotId,
