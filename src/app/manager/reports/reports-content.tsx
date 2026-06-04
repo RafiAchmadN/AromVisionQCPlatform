@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/language-context';
 import { TrendChart } from '@/components/shared/trend-chart';
 import { ProductQualityScorePanel } from '@/components/shared/quality-score';
+import { ExportCenter } from '@/components/shared/export-center';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -227,10 +228,7 @@ export function ManagerReportsContent() {
             {lang === 'en' ? 'Inspection quality summary per period' : 'Ringkasan kualitas inspeksi per periode'}
           </p>
         </div>
-        <a href="/api/reports/export" download
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors">
-          ⬇ {lang === 'en' ? 'Export CSV' : 'Ekspor CSV'}
-        </a>
+        <ExportCenter />
       </div>
 
       {/* Analytics intelligence panels */}

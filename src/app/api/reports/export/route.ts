@@ -8,10 +8,11 @@ export async function GET(request: NextRequest) {
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
   if (user.role === 'Operator') return makeApiError(403, 'FORBIDDEN', 'Access denied');
 
-  const url    = new URL(request.url);
-  const from   = url.searchParams.get('from')  ?? undefined;
-  const to     = url.searchParams.get('to')    ?? undefined;
-  const status = url.searchParams.get('status') ?? undefined;
+  const url          = new URL(request.url);
+  const from         = url.searchParams.get('from')          ?? undefined;
+  const to           = url.searchParams.get('to')            ?? undefined;
+  const status       = url.searchParams.get('status')        ?? undefined;
+  const inspectedOnly = url.searchParams.get('inspected_only') === '1';
 
   let query = supabaseAdmin
     .from('lots')
@@ -48,7 +49,10 @@ export async function GET(request: NextRequest) {
     inspection_reports: Report[] | null;
   };
 
-  const lots = (lotsRaw ?? []) as unknown as ExportLot[];
+  const allLots = (lotsRaw ?? []) as unknown as ExportLot[];
+  const lots = inspectedOnly
+    ? allLots.filter((l) => l.inspection_reports && l.inspection_reports.length > 0)
+    : allLots;
 
   const headers = [
     'lot_code', 'batch_name', 'product_type', 'operator',
