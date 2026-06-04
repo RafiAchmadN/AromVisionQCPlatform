@@ -81,3 +81,45 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return Response.json(updated);
 }
+
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getServerSession();
+  if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
+  if (user.role !== 'Admin') return makeApiError(403, 'FORBIDDEN', 'Admin only');
+
+  const { id } = await params;
+  if (id === user.id) return makeApiError(403, 'FORBIDDEN', 'Admin tidak bisa menghapus akun sendiri');
+
+  // Cek apakah user masih punya lots — tolak jika ada data operasional
+  const { count } = await supabaseAdmin
+    .from('lots')
+    .select('id', { count: 'exact', head: true })
+    .eq('operator_id', id);
+
+  if ((count ?? 0) > 0) {
+    return makeApiError(409, 'HAS_DATA', `User memiliki ${count} lot aktif. Nonaktifkan saja daripada menghapus.`);
+  }
+
+  const { data: target } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
+  if (!target) return makeApiError(404, 'NOT_FOUND', 'User not found');
+
+  // Hapus dari Supabase Auth terlebih dahulu
+  const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(id);
+  if (authErr) return makeApiError(500, 'INTERNAL_ERROR', `Gagal hapus auth: ${authErr.message}`);
+
+  // Hapus dari tabel users
+  const { error: dbErr } = await supabaseAdmin.from('users').delete().eq('id', id);
+  if (dbErr) return makeApiError(500, 'INTERNAL_ERROR', `Gagal hapus user: ${dbErr.message}`);
+
+  await writeAuditLog({
+    actor_id:    user.id,
+    action_type: 'USER_DELETED',
+    target_type: 'users',
+    target_id:   id,
+    value_before: { name: target.name, email: target.email, role: target.role },
+    value_after:  undefined,
+    ip_address:  getClientIp(_),
+  });
+
+  return Response.json({ success: true });
+}
