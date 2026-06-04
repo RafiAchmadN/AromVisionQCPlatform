@@ -1,15 +1,18 @@
 import { NextRequest } from 'next/server';
-import Groq from 'groq-sdk';
 import { getServerSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { makeApiError } from '@/lib/utils';
-
-const GROQ_KEY = process.env.GROQ_API_KEY ?? process.env.NEXT_PUBLIC_GROQ_API_KEY ?? '';
 
 export async function POST(request: NextRequest) {
   const user = await getServerSession();
   if (!user) return makeApiError(401, 'UNAUTHORIZED', 'Unauthenticated');
   if (user.role === 'Operator') return makeApiError(403, 'FORBIDDEN', 'Access denied');
+
+  // Read key at request time (not module load) to always get latest runtime env
+  const GROQ_KEY =
+    process.env.GROQ_API_KEY ||
+    process.env.NEXT_PUBLIC_GROQ_API_KEY ||
+    '';
 
   if (!GROQ_KEY) {
     return makeApiError(503, 'AI_UNAVAILABLE', 'GROQ_API_KEY not configured');
@@ -95,15 +98,28 @@ Write 2–4 sentences that:
 Use professional manufacturing and supply chain language appropriate for ISO 9001 documentation. Be direct and specific.`;
 
   try {
-    const groq = new Groq({ apiKey: GROQ_KEY });
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 300,
-      temperature: 0.3,
-      messages: [{ role: 'user', content: prompt }],
+    // Use direct fetch to Groq OpenAI-compatible API (more reliable in Lambda than SDK)
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 300,
+        temperature: 0.3,
+        messages: [{ role: 'user', content: prompt }],
+      }),
     });
 
-    const insight = completion.choices[0]?.message?.content ?? '';
+    if (!groqRes.ok) {
+      const errText = await groqRes.text().catch(() => groqRes.statusText);
+      return makeApiError(502, 'AI_ERROR', `Groq API error ${groqRes.status}: ${errText}`);
+    }
+
+    const groqData = await groqRes.json();
+    const insight: string = groqData.choices?.[0]?.message?.content ?? '';
 
     return Response.json({
       lot_id: lotId,
