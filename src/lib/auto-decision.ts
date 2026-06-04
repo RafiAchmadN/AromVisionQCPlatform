@@ -74,12 +74,17 @@ export async function runAutoDecision(report: InspectionReport): Promise<AutoDec
     return { decision: 'QUARANTINED', rules_evaluated: rules };
   }
 
+  // Hard override: Grade Reject is always REJECTED regardless of other rules
+  if (report.final_grade === 'Reject') {
+    return { decision: 'REJECTED', rules_evaluated: rules };
+  }
+
   const criticalRules = [confRule];
   const allCriticalPassed = criticalRules.every((r) => r.passed);
   const allPassed = rules.every((r) => r.passed);
 
   if (allPassed) return { decision: 'APPROVED', rules_evaluated: rules };
-  if (!allCriticalPassed || report.final_grade === 'Reject') {
+  if (!allCriticalPassed) {
     return { decision: 'REJECTED', rules_evaluated: rules };
   }
   return { decision: 'QUARANTINED', rules_evaluated: rules };
