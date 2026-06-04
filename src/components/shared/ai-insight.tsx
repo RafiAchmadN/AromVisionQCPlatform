@@ -92,7 +92,9 @@ export function AiInsightButton({ lotId, lotCode }: Props) {
 
       {insight && (
         <div className="px-4 py-4">
-          <p className="text-sm text-gray-700 leading-relaxed">{insight}</p>
+          <div className="max-h-[180px] overflow-y-auto pr-1">
+            <p className="text-sm text-gray-700 leading-relaxed">{insight}</p>
+          </div>
           <p className="text-[10px] text-gray-400 mt-2">
             {lang === 'en' ? 'Generated' : 'Dibuat'}: {generatedAt}
           </p>
