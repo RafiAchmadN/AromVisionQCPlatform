@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/language-context';
+import { TrendChart } from '@/components/shared/trend-chart';
+import { ProductQualityScorePanel } from '@/components/shared/quality-score';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -230,6 +232,14 @@ export function ManagerReportsContent() {
           ⬇ {lang === 'en' ? 'Export CSV' : 'Ekspor CSV'}
         </a>
       </div>
+
+      {/* Analytics intelligence panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TrendChart />
+        <ProductQualityScorePanel />
+      </div>
+
+      {/* Period summaries */}
       <div className="flex flex-row gap-4 items-start">
         {PERIODS.map(({ key }) => (
           <div key={key} className="flex-1 min-w-0">

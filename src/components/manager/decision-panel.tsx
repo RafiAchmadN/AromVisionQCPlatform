@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, CheckCircle, XCircle, AlertTriangle, ArrowUpCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, AlertTriangle, ArrowUpCircle, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/language-context';
+import { AiInsightButton } from '@/components/shared/ai-insight';
 import type { Lot, InspectionReport, Decision } from '@/lib/types';
 
 interface Props {
@@ -419,6 +420,22 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
               <DetailRow label={t('mgr.detailDuration')}  value={`${Math.round(report.inspection_duration / 60)} ${t('mgr.minutes')}`} />
             </CardContent>
           </Card>
+        )}
+
+        {/* AI Quality Insight + PDF */}
+        {report && !loading && (
+          <>
+            <AiInsightButton lotId={selectedLot.id} lotCode={selectedLot.lot_code} />
+            <a
+              href={`/reports/print/${selectedLot.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            >
+              <Printer className="w-4 h-4 text-gray-500" />
+              {isEn ? 'Print / Download PDF Report' : 'Cetak / Unduh Laporan PDF'}
+            </a>
+          </>
         )}
 
         {/* AI recommendation */}
