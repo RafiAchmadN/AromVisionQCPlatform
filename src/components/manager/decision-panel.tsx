@@ -398,10 +398,60 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
           <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">{error}</div>
         )}
 
-        {/* Inspection report */}
+        {/* ── 1. AI Recommendation (compact) ── */}
+        {autoDecision && !loading && (
+          <div className="flex items-center gap-2 rounded-lg bg-brand-50 border border-brand-100 px-3 py-2">
+            <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider shrink-0">
+              {isEn ? 'AI Rec.' : 'Rekomendasi AI'}
+            </span>
+            <Badge
+              variant={autoDecision.decision === 'APPROVED' ? 'success' : autoDecision.decision === 'REJECTED' ? 'destructive' : 'warning'}
+              className="text-xs px-2 py-0.5"
+            >
+              {autoDecision.decision}
+            </Badge>
+            <p className="text-[10px] text-brand-500 truncate">
+              {isEn ? 'Based on inspection data' : 'Berdasarkan data inspeksi'}
+            </p>
+          </div>
+        )}
+
+        {/* ── 2. Decision buttons (always visible first) ── */}
+        {!loading && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t('mgr.manualDecision')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 pt-0">
+              {([
+                { key: 'APPROVED'    as DecisionKey, label: isEn ? 'Approve'    : 'Setujui',   hint: isEn ? 'Batch passed QC, ready for production' : 'Batch lulus QC, siap diproses',                         border: 'border-green-200 hover:border-green-400 hover:bg-green-50',   text: 'text-green-700', dot: 'bg-green-500'  },
+                { key: 'REJECTED'    as DecisionKey, label: isEn ? 'Reject'     : 'Tolak',     hint: isEn ? 'Batch failed QC, discard or return'     : 'Batch gagal QC, buang atau kembalikan ke supplier',     border: 'border-red-200 hover:border-red-400 hover:bg-red-50',         text: 'text-red-700',   dot: 'bg-red-500'    },
+                { key: 'QUARANTINED' as DecisionKey, label: isEn ? 'Quarantine' : 'Karantina', hint: isEn ? 'Hold for further investigation'           : 'Tahan untuk investigasi lebih lanjut',                  border: 'border-amber-200 hover:border-amber-400 hover:bg-amber-50',   text: 'text-amber-700', dot: 'bg-amber-500'  },
+                { key: 'ESCALATED'   as DecisionKey, label: isEn ? 'Escalate'   : 'Eskalasi',  hint: isEn ? 'Forward to Admin / Management level'      : 'Teruskan ke Admin / Direksi',                           border: 'border-orange-200 hover:border-orange-400 hover:bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
+              ] as const).map(({ key, label, hint, border, text, dot }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPendingDecision(key)}
+                  className={`w-full text-left rounded-xl border-2 px-4 py-2.5 transition-all duration-150 flex items-center gap-3 ${border}`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${text}`}>{label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{hint}</p>
+                  </div>
+                  <span className="text-gray-300 text-xs">›</span>
+                </button>
+              ))}
+              {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── 3. Inspection report detail (collapsible-feel, below fold is OK) ── */}
         {report && !loading && (
           <Card>
-            <CardHeader><CardTitle className="text-sm">{t('mgr.inspDetail')}</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('mgr.inspDetail')}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-2 text-sm pt-0">
               <DetailRow label={t('mgr.detailBatch')} value={selectedLot.batch_name} />
               <DetailRow label={t('mgr.detailGrade')}
@@ -411,18 +461,18 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
                   </Badge>
                 }
               />
-              <DetailRow label={t('rpt.avgConf')}         value={`${(report.avg_confidence * 100).toFixed(1)}%`} />
-              <DetailRow label={t('rpt.avgRot')}          value={`${report.avg_rot_level.toFixed(1)}%`} />
-              <DetailRow label="Anomaly Score"            value={report.final_anomaly_score.toFixed(3)} />
-              <DetailRow label={t('mgr.detailTotalObj')}  value={report.total_objects_scanned} />
-              <DetailRow label={t('mgr.detailPassFail')}  value={`${report.pass_count} / ${report.fail_count}`} />
-              <DetailRow label={t('mgr.detailTotalDef')}  value={report.total_defects} />
-              <DetailRow label={t('mgr.detailDuration')}  value={`${Math.round(report.inspection_duration / 60)} ${t('mgr.minutes')}`} />
+              <DetailRow label={t('rpt.avgConf')}        value={`${(report.avg_confidence * 100).toFixed(1)}%`} />
+              <DetailRow label={t('rpt.avgRot')}         value={`${report.avg_rot_level.toFixed(1)}%`} />
+              <DetailRow label="Anomaly Score"           value={report.final_anomaly_score.toFixed(3)} />
+              <DetailRow label={t('mgr.detailTotalObj')} value={report.total_objects_scanned} />
+              <DetailRow label={t('mgr.detailPassFail')} value={`${report.pass_count} / ${report.fail_count}`} />
+              <DetailRow label={t('mgr.detailTotalDef')} value={report.total_defects} />
+              <DetailRow label={t('mgr.detailDuration')} value={`${Math.round(report.inspection_duration / 60)} ${t('mgr.minutes')}`} />
             </CardContent>
           </Card>
         )}
 
-        {/* AI Quality Insight + PDF */}
+        {/* ── 4. AI Quality Insight + PDF (secondary actions, scroll down) ── */}
         {report && !loading && (
           <>
             <AiInsightButton lotId={selectedLot.id} lotCode={selectedLot.lot_code} />
@@ -436,66 +486,6 @@ export function ManagerDecisionPanel({ selectedLot }: Props) {
               {isEn ? 'Print / Download PDF Report' : 'Cetak / Unduh Laporan PDF'}
             </a>
           </>
-        )}
-
-        {/* AI recommendation */}
-        {autoDecision && !loading && (
-          <Card>
-            <CardHeader><CardTitle className="text-sm">{t('mgr.aiReco')}</CardTitle></CardHeader>
-            <CardContent className="flex flex-col gap-3 pt-0">
-              <Badge
-                variant={autoDecision.decision === 'APPROVED' ? 'success' : autoDecision.decision === 'REJECTED' ? 'destructive' : 'warning'}
-                className="text-base px-4 py-1.5 self-start"
-              >
-                {autoDecision.decision}
-              </Badge>
-              <p className="text-xs text-gray-500">
-                {isEn ? 'AI recommendation based on inspection data. You can confirm, override, or escalate.' : 'Rekomendasi AI berdasarkan data inspeksi. Kamu bisa konfirmasi, override, atau eskalasi.'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Decision buttons */}
-        {!loading && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{t('mgr.manualDecision')}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 pt-0">
-              <p className="text-xs text-gray-500">
-                {isEn
-                  ? 'Click a button below to see what each decision means before confirming.'
-                  : 'Klik tombol di bawah untuk melihat penjelasan setiap keputusan sebelum konfirmasi.'}
-              </p>
-
-              {/* Decision option cards */}
-              <div className="flex flex-col gap-2">
-                {([
-                  { key: 'APPROVED'    as DecisionKey, label: isEn ? 'Approve'    : 'Setujui',   hint: isEn ? 'Batch passed QC, ready for production' : 'Batch lulus QC, siap diproses',                       border: 'border-green-200 hover:border-green-400 hover:bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-                  { key: 'REJECTED'    as DecisionKey, label: isEn ? 'Reject'     : 'Tolak',     hint: isEn ? 'Batch failed QC, discard or return'     : 'Batch gagal QC, buang atau kembalikan ke supplier',   border: 'border-red-200 hover:border-red-400 hover:bg-red-50',       text: 'text-red-700',   dot: 'bg-red-500'   },
-                  { key: 'QUARANTINED' as DecisionKey, label: isEn ? 'Quarantine' : 'Karantina', hint: isEn ? 'Hold for further investigation'           : 'Tahan untuk investigasi lebih lanjut',                border: 'border-amber-200 hover:border-amber-400 hover:bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-                  { key: 'ESCALATED'   as DecisionKey, label: isEn ? 'Escalate'   : 'Eskalasi',  hint: isEn ? 'Forward to Admin / Management level'      : 'Teruskan ke Admin / Direksi',                          border: 'border-orange-200 hover:border-orange-400 hover:bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
-                ] as const).map(({ key, label, hint, border, text, dot }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setPendingDecision(key)}
-                    className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-all duration-150 flex items-center gap-3 ${border}`}
-                  >
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold ${text}`}>{label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 truncate">{hint}</p>
-                    </div>
-                    <span className="text-gray-300 text-xs">›</span>
-                  </button>
-                ))}
-              </div>
-
-              {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-            </CardContent>
-          </Card>
         )}
       </div>
     </>
