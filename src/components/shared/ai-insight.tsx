@@ -48,7 +48,7 @@ export function AiInsightButton({ lotId, lotCode }: Props) {
             {lang === 'en' ? 'AI Quality Insight' : 'Insight Kualitas AI'}
           </p>
           <p className="text-[10px] text-brand-500">
-            {lang === 'en' ? 'Powered by Claude AI' : 'Didukung Claude AI'}{lotCode ? ` · ${lotCode}` : ''}
+            {lang === 'en' ? 'Powered by Groq · Llama 3.3' : 'Didukung Groq · Llama 3.3'}{lotCode ? ` · ${lotCode}` : ''}
           </p>
         </div>
         {!insight && (

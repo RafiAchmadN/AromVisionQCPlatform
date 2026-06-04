@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  env: {
+    GROQ_API_KEY: process.env.GROQ_API_KEY,
+  },
   // Allow dev access from local network devices
   allowedDevOrigins: ['192.168.1.11', '192.168.1.13', 'localhost'],
   experimental: {
