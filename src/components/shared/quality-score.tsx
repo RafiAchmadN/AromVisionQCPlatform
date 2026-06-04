@@ -56,7 +56,7 @@ export function ProductQualityScorePanel() {
         </p>
       </div>
 
-      <div className="p-4 flex flex-col gap-2">
+      <div className="p-4 flex flex-col gap-2 max-h-[420px] overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <div className="w-7 h-7 rounded-full border-2 border-brand-200 border-t-brand-600 animate-spin" />
