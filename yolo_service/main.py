@@ -1,6 +1,10 @@
 """
 AromVision YOLO Inference Service
-FastAPI + Ultralytics YOLOv11
+FastAPI + Ultralytics YOLOv11  OR  Roboflow Hosted API
+
+Inference mode (auto-detected at startup):
+  ROBOFLOW_API_KEY set  →  Roboflow Hosted Inference (no local model needed)
+  ROBOFLOW_API_KEY not set  →  Local YOLOv11 from models/best.pt
 
 Dataset: Fresh and Rotten Fruit Detection
 Port  : 8000
@@ -9,11 +13,13 @@ Run   : uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 import asyncio
 import base64
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cv2
+import httpx
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,17 +28,25 @@ from ultralytics import YOLO
 
 from class_map import resolve_class
 
-app = FastAPI(title="AromVision YOLO Service", version="2.0.0")
+app = FastAPI(title="AromVision YOLO Service", version="3.0.0")
 
-import os
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# ── Mode detection ────────────────────────────────────────────────────────────
+ROBOFLOW_API_KEY = os.environ.get("ROBOFLOW_API_KEY", "")
+ROBOFLOW_MODEL   = os.environ.get(
+    "ROBOFLOW_MODEL_ID",
+    "fresh-rotten-fruit-onb50-vbqco/8"   # default: model dari screenshot class list
+)
+ROBOFLOW_URL = f"https://detect.roboflow.com/{ROBOFLOW_MODEL}"
+
+USE_ROBOFLOW = bool(ROBOFLOW_API_KEY)
 
 MODEL_PATH = Path("models/best.pt")
 model: YOLO | None = None
@@ -51,15 +65,20 @@ def _load_yolo() -> YOLO | None:
 @app.on_event("startup")
 async def load_model():
     global model
-    loop = asyncio.get_event_loop()
-    model = await loop.run_in_executor(_executor, _load_yolo)
+    if USE_ROBOFLOW:
+        print(f"[MODE] Roboflow Hosted Inference — model: {ROBOFLOW_MODEL}")
+        print(f"[MODE] Local model loading SKIPPED (ROBOFLOW_API_KEY is set)")
+    else:
+        print(f"[MODE] Local YOLOv11 — loading {MODEL_PATH}")
+        loop = asyncio.get_event_loop()
+        model = await loop.run_in_executor(_executor, _load_yolo)
 
 
-# ---------- Schema ----------
+# ── Schema ────────────────────────────────────────────────────────────────────
 
 class DetectRequest(BaseModel):
     image_b64: str
-    conf: float = 0.10          # threshold webcam real-world dengan background bebas
+    conf: float = 0.10
 
 
 class BBox(BaseModel):
@@ -78,14 +97,14 @@ class ColorRGB(BaseModel):
 class Detection(BaseModel):
     object_class:     str
     confidence_score: float
-    rot_level:        float      # 0–100 persen
+    rot_level:        float
     color_rgb:        ColorRGB
-    color_deviation:  float      # 0–50
-    color_category:   str        # "Normal" | "Pucat" | "Terlalu Matang" | "Abnormal"
+    color_deviation:  float
+    color_category:   str
     defect_types:     list[str]
     defect_count:     int
-    defect_severity:  str        # "Minor" | "Moderate" | "Severe"
-    anomaly_score:    float      # 0–1
+    defect_severity:  str
+    anomaly_score:    float
     bbox:             BBox
 
 
@@ -99,24 +118,18 @@ class DetectResponse(BaseModel):
     frame_h:      int
 
 
-# ---------- Helper ----------
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _color_rgb(color_category: str) -> ColorRGB:
-    """Approximate RGB from colour category."""
-    if color_category == "Normal":
-        return ColorRGB(r=80,  g=155, b=60)
-    if color_category == "Pucat":
-        return ColorRGB(r=200, g=178, b=95)
-    if color_category == "Terlalu Matang":
-        return ColorRGB(r=145, g=82,  b=50)
-    return ColorRGB(r=120, g=60, b=60)  # Abnormal
+    if color_category == "Normal":        return ColorRGB(r=80,  g=155, b=60)
+    if color_category == "Pucat":         return ColorRGB(r=200, g=178, b=95)
+    if color_category == "Terlalu Matang":return ColorRGB(r=145, g=82,  b=50)
+    return ColorRGB(r=120, g=60, b=60)
 
 
 def _defect_types(defect_severity: str) -> list[str]:
-    if defect_severity == "Minor":
-        return ["minor_bruise"]
-    if defect_severity == "Moderate":
-        return ["brown_spot", "soft_area"]
+    if defect_severity == "Minor":    return ["minor_bruise"]
+    if defect_severity == "Moderate": return ["brown_spot", "soft_area"]
     return ["mold", "brown_spot", "decay"]
 
 
@@ -128,41 +141,25 @@ def _build_detection(
     is_fresh: bool = mapping["is_fresh"]
     obj_class: str = mapping["object_class"]
 
-    # rot_level: confidence-proportional — low confidence means uncertain, not severely rotten
-    # fresh:  conf=0.90 → 2%,  conf=0.50 → 10%, conf=0.10 → 18%
-    # rotten: conf=0.10 → 9%,  conf=0.50 → 45%, conf=0.90 → 81%
+    # rot_level: confidence-proportional — low confidence = uncertain, not severely rotten
     if is_fresh:
         rot_level = max(0.0, (1.0 - conf) * 20.0)
     else:
         rot_level = conf * 90.0
 
-    # color_category
-    if rot_level < 15:
-        color_category = "Normal"
-    elif rot_level < 40:
-        color_category = "Pucat"
-    elif rot_level < 75:
-        color_category = "Terlalu Matang"
-    else:
-        color_category = "Abnormal"
+    if rot_level < 15:   color_category = "Normal"
+    elif rot_level < 40: color_category = "Pucat"
+    elif rot_level < 75: color_category = "Terlalu Matang"
+    else:                color_category = "Abnormal"
 
-    # defect_count
-    if rot_level < 10:
-        defect_count = 0
-    elif rot_level < 30:
-        defect_count = 1
-    elif rot_level < 60:
-        defect_count = 2
-    else:
-        defect_count = 3 + int((rot_level - 60) / 15)
+    if rot_level < 10:   defect_count = 0
+    elif rot_level < 30: defect_count = 1
+    elif rot_level < 60: defect_count = 2
+    else:                defect_count = 3 + int((rot_level - 60) / 15)
 
-    # defect_severity
-    if rot_level < 20:
-        defect_severity = "Minor"
-    elif rot_level < 50:
-        defect_severity = "Moderate"
-    else:
-        defect_severity = "Severe"
+    if rot_level < 20:   defect_severity = "Minor"
+    elif rot_level < 50: defect_severity = "Moderate"
+    else:                defect_severity = "Severe"
 
     color_deviation = round(min(50.0, rot_level * 0.45), 2)
     anomaly_score   = min(1.0, rot_level / 100.0 + (1.0 - conf) * 0.15)
@@ -182,15 +179,55 @@ def _build_detection(
     )
 
 
-# ---------- Endpoints ----------
+# ── Roboflow inference ────────────────────────────────────────────────────────
+
+async def _roboflow_detect(image_b64: str, conf: float) -> tuple[list[Detection], float, int, int]:
+    """Call Roboflow Hosted API, return (detections, inference_ms, frame_w, frame_h)."""
+    conf_pct = max(1, int(conf * 100))  # Roboflow uses 1–100
+
+    t0 = time.perf_counter()
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            ROBOFLOW_URL,
+            params={"api_key": ROBOFLOW_API_KEY, "confidence": conf_pct},
+            content=image_b64.encode(),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+    inference_ms = (time.perf_counter() - t0) * 1000
+
+    if resp.status_code != 200:
+        raise HTTPException(502, detail=f"Roboflow API error {resp.status_code}: {resp.text[:300]}")
+
+    data = resp.json()
+    frame_w = data.get("image", {}).get("width",  640)
+    frame_h = data.get("image", {}).get("height", 480)
+
+    detections: list[Detection] = []
+    for pred in data.get("predictions", []):
+        cls_name   = pred["class"]
+        conf_val   = float(pred["confidence"])
+        cx, cy     = float(pred["x"]),     float(pred["y"])
+        pw, ph     = float(pred["width"]), float(pred["height"])
+        # Roboflow returns center-based → convert to top-left
+        x1, y1 = cx - pw / 2, cy - ph / 2
+        x2, y2 = cx + pw / 2, cy + ph / 2
+        detections.append(_build_detection(cls_name, conf_val, x1, y1, x2, y2))
+
+    print(f"[Roboflow] {len(detections)} detections in {inference_ms:.1f}ms", flush=True)
+    return detections, inference_ms, frame_w, frame_h
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
     return {
         "status":       "ok",
-        "model_loaded": model is not None,
-        "model_path":   str(MODEL_PATH),
-        "classes":      list(model.names.values()) if model else [],
+        "mode":         "roboflow" if USE_ROBOFLOW else "local",
+        "model_loaded": USE_ROBOFLOW or model is not None,
+        "roboflow_model": ROBOFLOW_MODEL if USE_ROBOFLOW else None,
+        "model_path":   str(MODEL_PATH) if not USE_ROBOFLOW else None,
+        "classes":      list(model.names.values()) if (not USE_ROBOFLOW and model) else [],
     }
 
 
@@ -202,36 +239,76 @@ async def test_detect():
     diag = {
         "numpy_version": _np.__version__,
         "torch_version": _torch.__version__,
-        "numpy_importable": True,
+        "mode": "roboflow" if USE_ROBOFLOW else "local",
     }
-    if model is None:
-        return {"ok": False, "error": "model not loaded", **diag}
-    try:
-        img = _np.zeros((100, 100, 3), dtype=_np.uint8)
-        img[:] = (40, 40, 180)
-        t0 = time.perf_counter()
-        results = model.predict(img, conf=0.05, verbose=False)
-        ms = (time.perf_counter() - t0) * 1000
-        n = sum(len(r.boxes) for r in results)
-        return {"ok": True, "inference_ms": round(ms, 1), "detections": n, **diag}
-    except Exception as exc:
-        import traceback
-        return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()[-600:], **diag}
+    if USE_ROBOFLOW:
+        # Buat gambar sintetis kecil, encode ke base64, kirim ke Roboflow
+        try:
+            img = _np.zeros((100, 100, 3), dtype=_np.uint8)
+            img[:] = (40, 40, 180)
+            _, buf = cv2.imencode(".jpg", img)
+            b64 = base64.b64encode(buf).decode()
+            dets, ms, _, _ = await _roboflow_detect(b64, 0.05)
+            return {"ok": True, "inference_ms": round(ms, 1), "detections": len(dets), **diag}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc), **diag}
+    else:
+        if model is None:
+            return {"ok": False, "error": "model not loaded", **diag}
+        try:
+            img = _np.zeros((100, 100, 3), dtype=_np.uint8)
+            img[:] = (40, 40, 180)
+            t0 = time.perf_counter()
+            results = model.predict(img, conf=0.05, verbose=False)
+            ms = (time.perf_counter() - t0) * 1000
+            n = sum(len(r.boxes) for r in results)
+            return {"ok": True, "inference_ms": round(ms, 1), "detections": n, **diag}
+        except Exception as exc:
+            import traceback
+            return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()[-600:], **diag}
 
 
 @app.get("/classes")
 async def get_classes():
+    if USE_ROBOFLOW:
+        return {
+            "classes": [
+                "freshapple","freshbanana","freshcucumber","freshokra","freshorange","freshpotato","freshtomato",
+                "rottenapple","rottenbanana","rottencucumber","rottenokra","rottenorange","rottenpotato","rottentomato",
+            ],
+            "model_loaded": True,
+            "mode": "roboflow",
+        }
     if model is None:
-        return {"classes": [], "model_loaded": False}
-    return {"classes": list(model.names.values()), "model_loaded": True}
+        return {"classes": [], "model_loaded": False, "mode": "local"}
+    return {"classes": list(model.names.values()), "model_loaded": True, "mode": "local"}
 
 
 @app.post("/detect", response_model=DetectResponse)
 async def detect(req: DetectRequest):
+    # ── Roboflow path ──────────────────────────────────────────────────────────
+    if USE_ROBOFLOW:
+        print(f"[Roboflow] Running detect, conf={req.conf}", flush=True)
+        try:
+            dets, ms, fw, fh = await _roboflow_detect(req.image_b64, req.conf)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(500, detail=f"Roboflow call failed: {exc}") from exc
+
+        return DetectResponse(
+            detections=  dets,
+            model_loaded=True,
+            inference_ms=round(ms, 1),
+            frame_w=     fw,
+            frame_h=     fh,
+        )
+
+    # ── Local YOLO path ────────────────────────────────────────────────────────
     if model is None:
         raise HTTPException(
             503,
-            detail="Model belum dimuat. Jalankan: python train.py terlebih dahulu.",
+            detail="Model belum dimuat. Set ROBOFLOW_API_KEY atau jalankan python train.py.",
         )
 
     try:
