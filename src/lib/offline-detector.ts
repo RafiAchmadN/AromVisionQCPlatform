@@ -1,10 +1,17 @@
 'use client';
 
-import * as ort from 'onnxruntime-web';
+// Dynamic import — prevents onnxruntime-web from being evaluated server-side
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let ortPromise: Promise<any> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getOrt(): Promise<any> {
+  if (!ortPromise) ortPromise = import('onnxruntime-web');
+  return ortPromise;
+}
 
 const MODEL_URL   = '/models/best.onnx';
 const INPUT_SIZE  = 640;
-const CONF_THRESH = 0.35;
+const CONF_THRESH = 0.20;
 const IOU_THRESH  = 0.45;
 const NUM_ANCHORS = 8400;
 
@@ -23,10 +30,14 @@ export interface OfflineDetection {
 }
 
 // Singleton ONNX session
-let sessionPromise: Promise<ort.InferenceSession> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sessionPromise: Promise<any> | null = null;
+export function resetYoloSession() { sessionPromise = null; }
 
-function initSession(): Promise<ort.InferenceSession> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function initSession(): Promise<any> {
   if (sessionPromise) return sessionPromise;
+  const ort = await getOrt();
   ort.env.wasm.wasmPaths = '/';
   ort.env.wasm.numThreads = 1;
   sessionPromise = ort.InferenceSession.create(MODEL_URL, {
@@ -109,6 +120,7 @@ export async function detectFromCanvas(
   canvas: HTMLCanvasElement,
   productType: string | null,
 ): Promise<OfflineDetection[]> {
+  const ort  = await getOrt();
   const sess = await initSession();
 
   const inputData = preprocess(canvas);

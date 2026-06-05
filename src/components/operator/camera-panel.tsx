@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { bboxColor, rotCategory } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
-import { detectFromCanvas, preloadYoloModel } from '@/lib/offline-detector';
+import { detectFromCanvas, preloadYoloModel, resetYoloSession } from '@/lib/offline-detector';
 import type { ActiveSession } from './workspace';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -308,6 +308,10 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           drawOverlay(dets, canvas, frameCanvas.width, frameCanvas.height);
           for (const det of dets) saveFrame(det).catch(() => {});
         } else { consecutiveEmptyRef.current += 1; }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setYoloError(`ONNX error: ${msg.slice(0, 80)}`);
+        resetYoloSession();
       } finally {
         pendingRef.current = false;
         setIsProcessing(false);

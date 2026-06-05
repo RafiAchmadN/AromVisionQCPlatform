@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
         conf:           body.conf ?? 0.45,
         filter_product: body.filter_product ?? null,
       }),
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
