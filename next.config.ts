@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Prevent onnxruntime-node platform binaries (~200MB) from being traced
+  // into the build output — only onnxruntime-web (WASM) runs client-side
+  serverExternalPackages: ['@huggingface/transformers', 'onnxruntime-node', 'onnxruntime-web'],
   env: {
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     NEXT_PUBLIC_GROQ_API_KEY: process.env.GROQ_API_KEY,
