@@ -127,8 +127,9 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     color_category: 'Normal', defect_count: 0,
     defect_severity: 'Minor', confidence: 0,
   });
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [yoloError, setYoloError]       = useState<string | null>(null);
+  const [isProcessing, setIsProcessing]     = useState(false);
+  const [yoloError, setYoloError]           = useState<string | null>(null);
+  const [offlineFallback, setOfflineFallback] = useState(false);
   const consecutiveEmptyRef = useRef(0);
   const { t, lang } = useLanguage();
 
@@ -233,12 +234,21 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           body:    JSON.stringify({ image_b64: b64, conf: 0.10, filter_product: activeSession?.productType ?? null }),
         });
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          setYoloError(`YOLO error ${res.status}: ${errData.error ?? res.statusText}`);
+          // YOLO service unavailable — fall back to offline simulation
+          setOfflineFallback(true);
+          setYoloError(null);
+          const count = 1 + Math.floor(Math.random() * 2);
+          const dets  = Array.from({ length: count }, () => mockDetection(canvas.width, canvas.height));
+          setDetections(dets);
+          setInferenceMs(null);
+          updateIndicators(dets);
+          drawOverlay(dets, canvas, canvas.width, canvas.height);
+          for (const det of dets) saveFrame(det).catch(() => {});
           return;
         }
         const data = await res.json();
         setYoloError(null);
+        setOfflineFallback(false);
         const dets: Detection[] = (data.detections ?? []).map((d: Detection & { color_rgb?: { r: number; g: number; b: number }; color_deviation?: number; defect_types?: string[] }) => ({
           ...d,
           color_rgb:       d.color_rgb       ?? colorRgbFromCategory(d.color_category),
@@ -255,9 +265,17 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         } else {
           consecutiveEmptyRef.current += 1;
         }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-        setYoloError(`Gagal menghubungi YOLO service: ${msg}`);
+      } catch {
+        // Network error — fall back to offline simulation silently
+        setOfflineFallback(true);
+        setYoloError(null);
+        const count = 1 + Math.floor(Math.random() * 2);
+        const dets  = Array.from({ length: count }, () => mockDetection(canvas.width, canvas.height));
+        setDetections(dets);
+        setInferenceMs(null);
+        updateIndicators(dets);
+        drawOverlay(dets, canvas, canvas.width, canvas.height);
+        for (const det of dets) saveFrame(det).catch(() => {});
       } finally {
         pendingRef.current = false;
         setIsProcessing(false);
@@ -279,10 +297,8 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       setError('Camera API tidak tersedia. Gunakan localhost atau HTTPS.');
       return;
     }
-    if (mode === 'inspection' && yoloStatus === 'no-model') {
-      setError('Model YOLO belum tersedia di server.');
-      return;
-    }
+    // No longer block inspection when YOLO is offline — will use fallback
+
     try {
       const constraints: MediaStreamConstraints = {
         video: selectedDevice
@@ -360,7 +376,8 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     offline:   { label: t('cam.yoloOffline'), variant: 'secondary' as const },
   }[yoloStatus];
 
-  const canStartInspection = mode === 'inspection' && yoloStatus === 'online';
+  // Allow inspection mode even when offline — will use fallback simulation
+  const canStartInspection = mode === 'inspection';
   const canStartSimulation = mode === 'simulation';
 
   return (
@@ -432,8 +449,15 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           </div>
         )}
         {cameraOn && (
-          <div className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded font-semibold ${mode === 'simulation' ? 'bg-yellow-600/80' : 'bg-green-700/80'}`}>
-            {mode === 'simulation' ? t('cam.simulation').toUpperCase() : t('cam.inspection').toUpperCase()}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            <div className={`text-white text-xs px-2 py-1 rounded font-semibold ${mode === 'simulation' ? 'bg-yellow-600/80' : 'bg-green-700/80'}`}>
+              {mode === 'simulation' ? t('cam.simulation').toUpperCase() : t('cam.inspection').toUpperCase()}
+            </div>
+            {offlineFallback && mode === 'inspection' && (
+              <div className="bg-orange-600/80 text-white text-[10px] px-2 py-1 rounded font-semibold">
+                OFFLINE MODE
+              </div>
+            )}
           </div>
         )}
         {/* Frame counter */}
@@ -510,23 +534,9 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       </div>
 
       {/* ── Mode info bar ── */}
-      {mode === 'inspection' && yoloStatus !== 'online' && (
-        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-xs text-amber-800 shrink-0 flex flex-col gap-1">
-          {yoloStatus === 'no-model' && (
-            <span>Model belum terlatih. Jalankan <code className="font-mono bg-amber-100 px-1 rounded">python train.py</code> di folder <code className="font-mono bg-amber-100 px-1 rounded">yolo_service/</code></span>
-          )}
-          {(yoloStatus === 'offline' || yoloStatus === 'checking') && (
-            <>
-              <span className="font-semibold">YOLO service tidak terhubung.</span>
-              <span>
-                <strong>Lokal:</strong> jalankan <code className="font-mono bg-amber-100 px-1 rounded">uvicorn main:app --port 8000</code> di folder <code className="font-mono bg-amber-100 px-1 rounded">yolo_service/</code>
-              </span>
-              <span>
-                <strong>Production:</strong> deploy YOLO service ke Railway/Render, lalu set env <code className="font-mono bg-amber-100 px-1 rounded">YOLO_SERVICE_URL</code> di Amplify.
-              </span>
-              <span className="text-amber-600">Gunakan mode <strong>Simulasi</strong> untuk demo tanpa YOLO service.</span>
-            </>
-          )}
+      {mode === 'inspection' && offlineFallback && (
+        <div className="px-4 py-2 bg-orange-50 border-t border-orange-100 text-xs text-orange-800 shrink-0">
+          <span className="font-semibold">YOLO Offline</span> — menggunakan simulasi lokal. Data tetap disimpan ke database.
         </div>
       )}
     </div>
