@@ -35,10 +35,13 @@ let sessionPromise: Promise<any> | null = null;
 export function resetYoloSession() { sessionPromise = null; }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Use jsdelivr CDN for WASM runtime — avoids local serving issues on Amplify/Next.js
+const WASM_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/';
+
 async function initSession(): Promise<any> {
   if (sessionPromise) return sessionPromise;
   const ort = await getOrt();
-  ort.env.wasm.wasmPaths = '/';
+  ort.env.wasm.wasmPaths = WASM_CDN;
   ort.env.wasm.numThreads = 1;
   sessionPromise = ort.InferenceSession.create(MODEL_URL, {
     executionProviders: ['wasm'],
