@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { bboxColor, rotCategory } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
+import { loadModel, detectOffline } from '@/lib/offline-detector';
 import type { ActiveSession } from './workspace';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -130,11 +131,24 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   const [isProcessing, setIsProcessing]     = useState(false);
   const [yoloError, setYoloError]           = useState<string | null>(null);
   const [offlineFallback, setOfflineFallback] = useState(false);
+  const [modelLoading, setModelLoading]     = useState(false);
+  const [modelLoadPct, setModelLoadPct]     = useState(0);
+  const [modelReady, setModelReady]         = useState(false);
   const consecutiveEmptyRef = useRef(0);
   const { t, lang } = useLanguage();
 
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
+
+  // Pre-load offline model when inspection mode is selected
+  useEffect(() => {
+    if (mode !== 'inspection' || modelReady || modelLoading) return;
+    setModelLoading(true);
+    loadModel((pct) => setModelLoadPct(pct))
+      .then(() => { setModelReady(true); setYoloStatus('online'); })
+      .catch((e) => { setYoloError(`Gagal load model: ${e.message}`); })
+      .finally(() => setModelLoading(false));
+  }, [mode, modelReady, modelLoading]);
 
   // YOLO health check — status indicator only, never flips to offline on network failure
   useEffect(() => {
@@ -223,50 +237,26 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     const useRealYolo = mode === 'inspection';
 
     if (useRealYolo) {
-      const b64 = captureFrame(video);
-      if (!b64) return;
+      if (!modelReady) return; // wait for model to load
       pendingRef.current = true;
       setIsProcessing(true);
+      const t0 = performance.now();
       try {
-        const res = await fetch('/api/yolo/detect', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ image_b64: b64, conf: 0.10, filter_product: activeSession?.productType ?? null }),
-        });
-        if (!res.ok) {
-          // YOLO service unavailable — fall back to offline simulation
-          setOfflineFallback(true);
-          setYoloError(null);
-          const count = 1 + Math.floor(Math.random() * 2);
-          const dets  = Array.from({ length: count }, () => mockDetection(canvas.width, canvas.height));
-          setDetections(dets);
-          setInferenceMs(null);
-          updateIndicators(dets);
-          drawOverlay(dets, canvas, canvas.width, canvas.height);
-          for (const det of dets) saveFrame(det).catch(() => {});
-          return;
-        }
-        const data = await res.json();
+        const dets = await detectOffline(canvas) as Detection[];
         setYoloError(null);
         setOfflineFallback(false);
-        const dets: Detection[] = (data.detections ?? []).map((d: Detection & { color_rgb?: { r: number; g: number; b: number }; color_deviation?: number; defect_types?: string[] }) => ({
-          ...d,
-          color_rgb:       d.color_rgb       ?? colorRgbFromCategory(d.color_category),
-          color_deviation: d.color_deviation ?? parseFloat((d.rot_level * 0.4).toFixed(2)),
-          defect_types:    d.defect_types    ?? defectTypesFromSeverity(d.defect_severity, ['minor_bruise']),
-        }));
-        setInferenceMs(data.inference_ms ?? null);
+        setInferenceMs(performance.now() - t0);
         setDetections(dets);
         if (dets.length > 0) {
           consecutiveEmptyRef.current = 0;
           updateIndicators(dets);
-          drawOverlay(dets, canvas, data.frame_w ?? canvas.width, data.frame_h ?? canvas.height);
+          drawOverlay(dets, canvas, canvas.width, canvas.height);
           for (const det of dets) saveFrame(det).catch(() => {});
         } else {
           consecutiveEmptyRef.current += 1;
         }
-      } catch {
-        // Network error — fall back to offline simulation silently
+      } catch (e) {
+        // Model inference failed — fall back to mock
         setOfflineFallback(true);
         setYoloError(null);
         const count = 1 + Math.floor(Math.random() * 2);
@@ -534,9 +524,21 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       </div>
 
       {/* ── Mode info bar ── */}
+      {mode === 'inspection' && modelLoading && (
+        <div className="px-4 py-2 bg-brand-50 border-t border-brand-100 text-xs text-brand-800 shrink-0">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-3 h-3 rounded-full border-2 border-brand-300 border-t-brand-600 animate-spin" />
+            <span className="font-semibold">Memuat model AI offline... {modelLoadPct > 0 ? `${modelLoadPct}%` : ''}</span>
+          </div>
+          <div className="w-full bg-brand-100 rounded-full h-1.5">
+            <div className="bg-brand-600 h-1.5 rounded-full transition-all" style={{ width: `${modelLoadPct}%` }} />
+          </div>
+          <span className="text-brand-500 text-[10px]">Download model ~28MB — hanya sekali, lalu tersimpan di browser</span>
+        </div>
+      )}
       {mode === 'inspection' && offlineFallback && (
         <div className="px-4 py-2 bg-orange-50 border-t border-orange-100 text-xs text-orange-800 shrink-0">
-          <span className="font-semibold">YOLO Offline</span> — menggunakan simulasi lokal. Data tetap disimpan ke database.
+          <span className="font-semibold">Fallback Mode</span> — model AI tidak bisa load, menggunakan simulasi lokal.
         </div>
       )}
     </div>
