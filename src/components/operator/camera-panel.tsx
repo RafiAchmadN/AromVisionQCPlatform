@@ -115,10 +115,12 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   const pendingRef  = useRef(false);
 
   const [mode, setMode]               = useState<InspectionMode>('simulation');
+  const [yoloMode, setYoloMode]       = useState<'online' | 'offline'>('offline');
   const [cameraOn, setCameraOn]       = useState(false);
   const [error, setError]             = useState('');
   const [devices, setDevices]         = useState<MediaDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('');
+  const [camIdx, setCamIdx]           = useState(0);
   const [detections, setDetections]   = useState<Detection[]>([]);
   const [yoloStatus, setYoloStatus]   = useState<YoloStatus>('checking');
   const [inferenceMs, setInferenceMs] = useState<number | null>(null);
@@ -170,10 +172,25 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       .then((all) => {
         const cams = all.filter((d) => d.kind === 'videoinput');
         setDevices(cams);
-        if (cams.length > 0) setSelectedDevice(cams[0].deviceId);
+        if (cams.length > 0) { setCamIdx(0); setSelectedDevice(cams[0].deviceId); }
       })
       .catch(() => {});
   }, []);
+
+  // Camera navigation helpers
+  function prevCamera() {
+    if (devices.length < 2 || cameraOn) return;
+    const next = (camIdx - 1 + devices.length) % devices.length;
+    setCamIdx(next); setSelectedDevice(devices[next].deviceId);
+  }
+  function nextCamera() {
+    if (devices.length < 2 || cameraOn) return;
+    const next = (camIdx + 1) % devices.length;
+    setCamIdx(next); setSelectedDevice(devices[next].deviceId);
+  }
+  const camLabel = devices[camIdx]?.label
+    ? devices[camIdx].label.replace(/\s*\(.*?\)\s*/g, '').trim().slice(0, 22)
+    : `Kamera ${camIdx + 1}`;
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -226,16 +243,54 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) return;
 
-    const useRealYolo = mode === 'inspection';
+    const useInspection = mode === 'inspection';
 
-    if (useRealYolo) {
+    if (useInspection) {
       pendingRef.current = true;
       setIsProcessing(true);
       const t0 = performance.now();
+
+      // Try Railway YOLO when online mode selected
+      if (yoloMode === 'online') {
+        try {
+          const b64 = captureFrame(video);
+          if (!b64) { pendingRef.current = false; setIsProcessing(false); return; }
+          const res = await fetch('/api/yolo/detect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_b64: b64, conf: 0.10, filter_product: activeSession?.productType ?? null }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setOfflineFallback(false);
+            setYoloError(null);
+            const dets: Detection[] = (data.detections ?? []).map((d: Detection & { color_rgb?: { r: number; g: number; b: number }; color_deviation?: number; defect_types?: string[] }) => ({
+              ...d,
+              color_rgb:       d.color_rgb       ?? colorRgbFromCategory(d.color_category),
+              color_deviation: d.color_deviation ?? parseFloat((d.rot_level * 0.4).toFixed(2)),
+              defect_types:    d.defect_types    ?? defectTypesFromSeverity(d.defect_severity, ['minor_bruise']),
+            }));
+            setInferenceMs(data.inference_ms ?? (performance.now() - t0));
+            setDetections(dets);
+            if (dets.length > 0) {
+              consecutiveEmptyRef.current = 0;
+              updateIndicators(dets);
+              drawOverlay(dets, canvas, data.frame_w ?? canvas.width, data.frame_h ?? canvas.height);
+              for (const det of dets) saveFrame(det).catch(() => {});
+            } else { consecutiveEmptyRef.current += 1; }
+            pendingRef.current = false; setIsProcessing(false);
+            return;
+          }
+        } catch { /* fall through to offline */ }
+        setOfflineFallback(true);
+        setYoloError(null);
+      }
+
+      // Offline pixel analysis
       try {
         const dets = detectFromCanvas(canvas, activeSession?.productType ?? null) as Detection[];
         setYoloError(null);
-        setOfflineFallback(true);
+        setOfflineFallback(yoloMode === 'offline');
         setInferenceMs(performance.now() - t0);
         setDetections(dets);
         if (dets.length > 0) {
@@ -243,9 +298,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           updateIndicators(dets);
           drawOverlay(dets, canvas, canvas.width, canvas.height);
           for (const det of dets) saveFrame(det).catch(() => {});
-        } else {
-          consecutiveEmptyRef.current += 1;
-        }
+        } else { consecutiveEmptyRef.current += 1; }
       } finally {
         pendingRef.current = false;
         setIsProcessing(false);
@@ -259,7 +312,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       drawOverlay(dets, canvas, canvas.width, canvas.height);
       for (const det of dets) saveFrame(det).catch(() => {});
     }
-  }, [mode, yoloStatus, saveFrame]);
+  }, [mode, yoloMode, yoloStatus, saveFrame, activeSession]);
 
   const startCamera = useCallback(async () => {
     setError('');
@@ -352,7 +405,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Header ── */}
+      {/* ── Header row 1: title + mode + status ── */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-brand-100 bg-gradient-to-r from-brand-50 to-white">
         <div className="flex items-center gap-2">
           <div className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-400 to-brand-600" />
@@ -361,24 +414,68 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         <div className="flex items-center gap-2">
           {/* Mode toggle */}
           <div className="flex rounded-md border border-brand-200 overflow-hidden text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => { setMode('simulation'); if (cameraOn) stopCamera(); else { const c = canvasRef.current; c?.getContext('2d')?.clearRect(0,0,c.width,c.height); } setDetections([]); }}
-              className={`px-2.5 py-1 transition-colors ${mode === 'simulation' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}
-            >
+            <button type="button"
+              onClick={() => { setMode('simulation'); if (cameraOn) stopCamera(); setDetections([]); }}
+              className={`px-2.5 py-1 transition-colors ${mode === 'simulation' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}>
               {t('cam.simulation')}
             </button>
-            <button
-              type="button"
-              onClick={() => { setMode('inspection'); if (cameraOn) stopCamera(); else { const c = canvasRef.current; c?.getContext('2d')?.clearRect(0,0,c.width,c.height); } setDetections([]); }}
-              className={`px-2.5 py-1 transition-colors ${mode === 'inspection' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}
-            >
+            <button type="button"
+              onClick={() => { setMode('inspection'); if (cameraOn) stopCamera(); setDetections([]); }}
+              className={`px-2.5 py-1 transition-colors ${mode === 'inspection' ? 'bg-brand-600 text-white' : 'text-brand-700 hover:bg-brand-50'}`}>
               {t('cam.inspection')}
             </button>
           </div>
-          <Badge variant={yoloBadge.variant}>{yoloBadge.label}</Badge>
           <Badge variant={cameraOn ? 'success' : 'secondary'}>{cameraOn ? t('cam.live') : 'Standby'}</Badge>
         </div>
+      </div>
+
+      {/* ── Header row 2: camera selector + YOLO mode toggle ── */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white gap-3">
+        {/* Camera selector */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.235a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden text-xs">
+            <button type="button" onClick={prevCamera} disabled={devices.length < 2 || cameraOn}
+              className="px-1.5 py-1 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-colors">◀</button>
+            <span className="px-2 py-1 text-gray-700 font-medium border-x border-gray-200 min-w-[90px] text-center truncate">
+              {devices.length === 0 ? 'No Camera' : camLabel}
+            </span>
+            <button type="button" onClick={nextCamera} disabled={devices.length < 2 || cameraOn}
+              className="px-1.5 py-1 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-colors">▶</button>
+          </div>
+          {devices.length > 0 && (
+            <span className="text-[10px] text-gray-400">{camIdx + 1}/{devices.length}</span>
+          )}
+        </div>
+
+        {/* YOLO mode toggle — only in inspection mode */}
+        {mode === 'inspection' && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-gray-500 font-medium">YOLO:</span>
+            <div className="flex rounded-md border border-gray-200 overflow-hidden text-[11px] font-semibold">
+              <button type="button"
+                onClick={() => { if (!cameraOn) setYoloMode('online'); }}
+                disabled={cameraOn}
+                className={`px-2.5 py-1 transition-colors flex items-center gap-1 ${
+                  yoloMode === 'online' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-50 disabled:opacity-50'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${yoloMode === 'online' ? 'bg-white' : 'bg-gray-400'}`} />
+                Online
+              </button>
+              <button type="button"
+                onClick={() => { if (!cameraOn) setYoloMode('offline'); }}
+                disabled={cameraOn}
+                className={`px-2.5 py-1 transition-colors flex items-center gap-1 ${
+                  yoloMode === 'offline' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-50 disabled:opacity-50'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${yoloMode === 'offline' ? 'bg-white' : 'bg-gray-400'}`} />
+                Offline
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Video feed ── */}
@@ -440,38 +537,17 @@ export function OperatorCameraPanel({ activeSession }: Props) {
 
       {/* ── Controls ── */}
       <div className="px-4 py-2 border-t border-brand-100 flex items-center gap-3 bg-white shrink-0">
-        {devices.length > 1 && (
-          <select
-            aria-label="Pilih kamera"
-            title="Pilih kamera"
-            className="text-xs border border-gray-200 rounded px-2 py-1 flex-1 focus:outline-none"
-            value={selectedDevice}
-            onChange={(e) => setSelectedDevice(e.target.value)}
-            disabled={cameraOn}
-          >
-            {devices.map((d) => (
-              <option key={d.deviceId} value={d.deviceId}>
-                {d.label || `Kamera ${d.deviceId.slice(0, 8)}`}
-              </option>
-            ))}
-          </select>
-        )}
         {!cameraOn ? (
-          <Button
-            size="sm"
-            onClick={startCamera}
-            className="shrink-0"
-            disabled={mode === 'inspection' && !canStartInspection && !canStartSimulation}
-          >
+          <Button size="sm" onClick={startCamera} className="shrink-0 flex-1">
             {mode === 'inspection' ? t('cam.inspection') : t('cam.enableCam')}
           </Button>
         ) : (
-          <Button size="sm" variant="destructive" onClick={stopCamera} className="shrink-0">
+          <Button size="sm" variant="destructive" onClick={stopCamera} className="shrink-0 flex-1">
             {t('cam.disableCam')}
           </Button>
         )}
         {!activeSession && (
-          <span className="text-xs text-amber-600 font-medium">{t('cam.startLot')}</span>
+          <span className="text-xs text-amber-600 font-medium shrink-0">{t('cam.startLot')}</span>
         )}
       </div>
 
