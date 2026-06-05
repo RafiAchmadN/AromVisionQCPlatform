@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { bboxColor, rotCategory } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
-import { loadModel, detectOffline } from '@/lib/offline-detector';
+import { detectFromCanvas } from '@/lib/offline-detector';
 import type { ActiveSession } from './workspace';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -128,27 +128,19 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     color_category: 'Normal', defect_count: 0,
     defect_severity: 'Minor', confidence: 0,
   });
-  const [isProcessing, setIsProcessing]     = useState(false);
-  const [yoloError, setYoloError]           = useState<string | null>(null);
+  const [isProcessing, setIsProcessing]       = useState(false);
+  const [yoloError, setYoloError]             = useState<string | null>(null);
   const [offlineFallback, setOfflineFallback] = useState(false);
-  const [modelLoading, setModelLoading]     = useState(false);
-  const [modelLoadPct, setModelLoadPct]     = useState(0);
-  const [modelReady, setModelReady]         = useState(false);
   const consecutiveEmptyRef = useRef(0);
   const { t, lang } = useLanguage();
 
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
 
-  // Pre-load offline model when inspection mode is selected
+  // Offline mode is always ready — pixel analysis needs no model download
   useEffect(() => {
-    if (mode !== 'inspection' || modelReady || modelLoading) return;
-    setModelLoading(true);
-    loadModel((pct) => setModelLoadPct(pct))
-      .then(() => { setModelReady(true); setYoloStatus('online'); })
-      .catch((e) => { setYoloError(`Gagal load model: ${e.message}`); })
-      .finally(() => setModelLoading(false));
-  }, [mode, modelReady, modelLoading]);
+    if (mode === 'inspection') setYoloStatus('online');
+  }, [mode]);
 
   // YOLO health check — status indicator only, never flips to offline on network failure
   useEffect(() => {
@@ -237,14 +229,13 @@ export function OperatorCameraPanel({ activeSession }: Props) {
     const useRealYolo = mode === 'inspection';
 
     if (useRealYolo) {
-      if (!modelReady) return; // wait for model to load
       pendingRef.current = true;
       setIsProcessing(true);
       const t0 = performance.now();
       try {
-        const dets = await detectOffline(canvas) as Detection[];
+        const dets = detectFromCanvas(canvas, activeSession?.productType ?? null) as Detection[];
         setYoloError(null);
-        setOfflineFallback(false);
+        setOfflineFallback(true);
         setInferenceMs(performance.now() - t0);
         setDetections(dets);
         if (dets.length > 0) {
@@ -255,17 +246,6 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         } else {
           consecutiveEmptyRef.current += 1;
         }
-      } catch (e) {
-        // Model inference failed — fall back to mock
-        setOfflineFallback(true);
-        setYoloError(null);
-        const count = 1 + Math.floor(Math.random() * 2);
-        const dets  = Array.from({ length: count }, () => mockDetection(canvas.width, canvas.height));
-        setDetections(dets);
-        setInferenceMs(null);
-        updateIndicators(dets);
-        drawOverlay(dets, canvas, canvas.width, canvas.height);
-        for (const det of dets) saveFrame(det).catch(() => {});
       } finally {
         pendingRef.current = false;
         setIsProcessing(false);
@@ -524,21 +504,9 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       </div>
 
       {/* ── Mode info bar ── */}
-      {mode === 'inspection' && modelLoading && (
-        <div className="px-4 py-2 bg-brand-50 border-t border-brand-100 text-xs text-brand-800 shrink-0">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full border-2 border-brand-300 border-t-brand-600 animate-spin" />
-            <span className="font-semibold">Memuat model AI offline... {modelLoadPct > 0 ? `${modelLoadPct}%` : ''}</span>
-          </div>
-          <div className="w-full bg-brand-100 rounded-full h-1.5">
-            <div className="bg-brand-600 h-1.5 rounded-full transition-all" style={{ width: `${modelLoadPct}%` }} />
-          </div>
-          <span className="text-brand-500 text-[10px]">Download model ~28MB — hanya sekali, lalu tersimpan di browser</span>
-        </div>
-      )}
       {mode === 'inspection' && offlineFallback && (
-        <div className="px-4 py-2 bg-orange-50 border-t border-orange-100 text-xs text-orange-800 shrink-0">
-          <span className="font-semibold">Fallback Mode</span> — model AI tidak bisa load, menggunakan simulasi lokal.
+        <div className="px-4 py-2 bg-brand-50 border-t border-brand-100 text-xs text-brand-800 shrink-0">
+          <span className="font-semibold">Mode Offline</span> — analisis kualitas dari piksel kamera. Jenis produk diambil dari data lot.
         </div>
       )}
     </div>
