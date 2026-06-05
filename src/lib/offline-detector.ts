@@ -1,8 +1,12 @@
 'use client';
 
-// Offline quality analyzer — no external model, no large packages
-// Uses canvas pixel analysis to estimate rot level, color category, and defects.
-// Product class comes from the active lot (we already know what's being inspected).
+import * as ort from 'onnxruntime-web';
+
+const MODEL_URL   = '/models/best.onnx';
+const INPUT_SIZE  = 640;
+const CONF_THRESH = 0.35;
+const IOU_THRESH  = 0.45;
+const NUM_ANCHORS = 8400;
 
 export interface OfflineDetection {
   object_class: string;
@@ -18,110 +22,143 @@ export interface OfflineDetection {
   bbox: { x: number; y: number; w: number; h: number };
 }
 
-function rand(min: number, max: number) {
-  return min + Math.random() * (max - min);
+// Singleton ONNX session
+let sessionPromise: Promise<ort.InferenceSession> | null = null;
+
+function initSession(): Promise<ort.InferenceSession> {
+  if (sessionPromise) return sessionPromise;
+  ort.env.wasm.wasmPaths = '/';
+  ort.env.wasm.numThreads = 1;
+  sessionPromise = ort.InferenceSession.create(MODEL_URL, {
+    executionProviders: ['wasm'],
+  });
+  return sessionPromise;
 }
 
-// Analyze pixels in a region and return quality metrics
-function analyzeRegion(
-  data: Uint8ClampedArray,
-  width: number,
-  height: number
-): { avgR: number; avgG: number; avgB: number; brownPct: number; darkPct: number } {
-  let r = 0, g = 0, b = 0;
-  let brownCount = 0, darkCount = 0;
-  const total = width * height;
+// Call this when entering inspection mode to preload model in background
+export function preloadYoloModel(): void {
+  initSession().catch(() => {
+    sessionPromise = null; // allow retry
+  });
+}
 
-  for (let i = 0; i < data.length; i += 4) {
-    const pr = data[i], pg = data[i + 1], pb = data[i + 2];
-    r += pr; g += pg; b += pb;
-
-    // Brown detection: R>G>B and G is mid-range
-    if (pr > 80 && pg > 40 && pb < 80 && pr > pg && pg > pb && pr - pb > 40) brownCount++;
-    // Dark/mold detection: all channels low
-    if (pr < 60 && pg < 60 && pb < 60) darkCount++;
+// Resize source canvas to 640×640 and convert to float32 CHW [0,1]
+function preprocess(source: HTMLCanvasElement): Float32Array {
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = INPUT_SIZE;
+  const ctx = tmp.getContext('2d')!;
+  ctx.drawImage(source, 0, 0, INPUT_SIZE, INPUT_SIZE);
+  const { data } = ctx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
+  const pixels = INPUT_SIZE * INPUT_SIZE;
+  const input  = new Float32Array(3 * pixels);
+  for (let i = 0; i < pixels; i++) {
+    input[0 * pixels + i] = data[i * 4 + 0] / 255; // R
+    input[1 * pixels + i] = data[i * 4 + 1] / 255; // G
+    input[2 * pixels + i] = data[i * 4 + 2] / 255; // B
   }
-
-  return {
-    avgR: r / total,
-    avgG: g / total,
-    avgB: b / total,
-    brownPct: (brownCount / total) * 100,
-    darkPct: (darkCount / total) * 100,
-  };
+  return input;
 }
 
-export function detectFromCanvas(
+function iou(a: number[], b: number[]): number {
+  const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]);
+  const x2 = Math.min(a[2], b[2]), y2 = Math.min(a[3], b[3]);
+  if (x2 <= x1 || y2 <= y1) return 0;
+  const inter = (x2 - x1) * (y2 - y1);
+  return inter / ((a[2]-a[0])*(a[3]-a[1]) + (b[2]-b[0])*(b[3]-b[1]) - inter);
+}
+
+// Map YOLO freshness class → quality metrics (mirrors main.py logic)
+function classToMetrics(classId: number, conf: number) {
+  const isFresh  = classId === 0;
+  const rot_raw  = isFresh ? Math.max(0, (1 - conf) * 20) : conf * 90;
+  const rot_level = Math.round(rot_raw * 100) / 100;
+
+  const color_category =
+    rot_level < 15 ? 'Normal' :
+    rot_level < 40 ? 'Pucat' :
+    rot_level < 75 ? 'Terlalu Matang' : 'Abnormal';
+
+  const color_rgb =
+    color_category === 'Normal'         ? { r: 80,  g: 155, b: 60  } :
+    color_category === 'Pucat'          ? { r: 200, g: 178, b: 95  } :
+    color_category === 'Terlalu Matang' ? { r: 145, g: 82,  b: 50  } :
+                                          { r: 120, g: 60,  b: 60  };
+
+  const defect_severity = rot_level < 20 ? 'Minor' : rot_level < 50 ? 'Moderate' : 'Severe';
+
+  const defect_types =
+    rot_level < 20 ? ['minor_bruise'] :
+    rot_level < 40 ? ['brown_spot', 'soft_area'] :
+    rot_level < 70 ? ['mold', 'brown_spot'] :
+                     ['mold', 'decay', 'rupture'];
+
+  const defect_count =
+    rot_level < 10 ? 0 :
+    rot_level < 30 ? 1 :
+    rot_level < 60 ? 2 :
+    3 + Math.floor((rot_level - 60) / 15);
+
+  const anomaly_score = Math.min(1.0,
+    Math.round((rot_level / 100 + (1 - conf) * 0.15) * 10000) / 10000
+  );
+
+  return { rot_level, color_category, color_rgb, color_deviation: +(rot_level * 0.45).toFixed(2), defect_severity, defect_types, defect_count, anomaly_score };
+}
+
+export async function detectFromCanvas(
   canvas: HTMLCanvasElement,
-  productType: string | null
-): OfflineDetection[] {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return [];
+  productType: string | null,
+): Promise<OfflineDetection[]> {
+  const sess = await initSession();
 
-  const w = canvas.width;
-  const h = canvas.height;
+  const inputData = preprocess(canvas);
+  const tensor    = new ort.Tensor('float32', inputData, [1, 3, INPUT_SIZE, INPUT_SIZE]);
+  const result    = await sess.run({ images: tensor });
+  const raw       = result.output0.data as Float32Array;
 
-  // Analyze 1-3 random regions (simulating multiple objects)
-  const count = 1 + Math.floor(Math.random() * 2);
-  const results: OfflineDetection[] = [];
+  // output0 shape [1, 8, 8400]: rows are [cx, cy, w, h, cls0..cls3], cols are anchors
+  const candidates: Array<{ bbox: number[]; score: number; classId: number }> = [];
 
-  for (let i = 0; i < count; i++) {
-    // Random bbox (center-biased)
-    const bw = rand(w * 0.15, w * 0.35);
-    const bh = rand(h * 0.20, h * 0.40);
-    const bx = rand(w * 0.05, w * 0.95 - bw);
-    const by = rand(h * 0.05, h * 0.95 - bh);
+  for (let i = 0; i < NUM_ANCHORS; i++) {
+    let maxScore = 0, classId = 0;
+    for (let c = 0; c < 4; c++) {
+      const s = raw[(4 + c) * NUM_ANCHORS + i];
+      if (s > maxScore) { maxScore = s; classId = c; }
+    }
+    if (maxScore < CONF_THRESH) continue;
 
-    // Get pixels
-    const imageData = ctx.getImageData(
-      Math.round(bx), Math.round(by),
-      Math.round(bw), Math.round(bh)
-    );
-
-    const { avgR, avgG, avgB, brownPct, darkPct } = analyzeRegion(
-      imageData.data,
-      Math.round(bw),
-      Math.round(bh)
-    );
-
-    // Rot level: weighted by brown + dark pixel percentage
-    const rot_level = Math.min(100, Math.round(brownPct * 1.8 + darkPct * 2.5));
-
-    // Color category
-    const color_category =
-      rot_level < 15 ? 'Normal' :
-      rot_level < 40 ? 'Pucat' :
-      rot_level < 70 ? 'Terlalu Matang' : 'Abnormal';
-
-    // Confidence — based on image clarity (not too dark, not too bright)
-    const brightness = (avgR + avgG + avgB) / 3;
-    const confidence = Math.min(0.97, Math.max(0.45,
-      brightness > 30 && brightness < 220 ? 0.75 + Math.random() * 0.20 : 0.45
-    ));
-
-    const severity = rot_level < 20 ? 'Minor' : rot_level < 55 ? 'Moderate' : 'Severe';
-    const defect_types =
-      rot_level < 20 ? ['minor_bruise'] :
-      rot_level < 40 ? ['brown_spot', 'soft_area'] :
-      rot_level < 70 ? ['mold', 'brown_spot'] :
-                       ['mold', 'decay', 'rupture'];
-    const defect_count = rot_level < 20 ? Math.floor(Math.random() * 2) : 1 + Math.floor(rot_level / 40);
-    const anomaly_score = parseFloat(((rot_level / 100) * 0.65 + (1 - confidence) * 0.35).toFixed(4));
-
-    results.push({
-      object_class:     productType ?? 'bahan_baku',
-      confidence_score: parseFloat(confidence.toFixed(3)),
-      rot_level,
-      color_rgb:        { r: Math.round(avgR), g: Math.round(avgG), b: Math.round(avgB) },
-      color_deviation:  parseFloat((rot_level * 0.4).toFixed(2)),
-      color_category,
-      defect_types,
-      defect_count,
-      defect_severity:  severity,
-      anomaly_score,
-      bbox: { x: bx, y: by, w: bw, h: bh },
-    });
+    const cx = raw[0 * NUM_ANCHORS + i];
+    const cy = raw[1 * NUM_ANCHORS + i];
+    const w  = raw[2 * NUM_ANCHORS + i];
+    const h  = raw[3 * NUM_ANCHORS + i];
+    candidates.push({ bbox: [cx - w/2, cy - h/2, cx + w/2, cy + h/2], score: maxScore, classId });
   }
 
-  return results;
+  // Greedy NMS
+  candidates.sort((a, b) => b.score - a.score);
+  const kept: typeof candidates = [];
+  const suppressed = new Set<number>();
+  for (let i = 0; i < candidates.length; i++) {
+    if (suppressed.has(i)) continue;
+    kept.push(candidates[i]);
+    for (let j = i + 1; j < candidates.length; j++) {
+      if (iou(candidates[i].bbox, candidates[j].bbox) > IOU_THRESH) suppressed.add(j);
+    }
+  }
+
+  const scaleX = canvas.width  / INPUT_SIZE;
+  const scaleY = canvas.height / INPUT_SIZE;
+  const objectClass = productType ?? 'bahan_baku';
+
+  return kept.map(({ bbox, score, classId }) => ({
+    object_class:     objectClass,
+    confidence_score: Math.round(score * 1000) / 1000,
+    bbox: {
+      x: bbox[0] * scaleX,
+      y: bbox[1] * scaleY,
+      w: (bbox[2] - bbox[0]) * scaleX,
+      h: (bbox[3] - bbox[1]) * scaleY,
+    },
+    ...classToMetrics(classId, score),
+  }));
 }

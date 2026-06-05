@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { bboxColor, rotCategory } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
-import { detectFromCanvas } from '@/lib/offline-detector';
+import { detectFromCanvas, preloadYoloModel } from '@/lib/offline-detector';
 import type { ActiveSession } from './workspace';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -139,9 +139,12 @@ export function OperatorCameraPanel({ activeSession }: Props) {
   // Reset saved count when session changes
   useEffect(() => { setSavedCount(0); }, [activeSession?.sessionId]);
 
-  // Offline mode is always ready — pixel analysis needs no model download
+  // Preload YOLO ONNX model when entering inspection mode
   useEffect(() => {
-    if (mode === 'inspection') setYoloStatus('online');
+    if (mode === 'inspection') {
+      setYoloStatus('online');
+      preloadYoloModel();
+    }
   }, [mode]);
 
   // YOLO health check — status indicator only, never flips to offline on network failure
@@ -286,9 +289,9 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         setYoloError(null);
       }
 
-      // Offline pixel analysis
+      // Offline YOLO ONNX inference
       try {
-        const dets = detectFromCanvas(canvas, activeSession?.productType ?? null) as Detection[];
+        const dets = await detectFromCanvas(canvas, activeSession?.productType ?? null) as Detection[];
         setYoloError(null);
         setOfflineFallback(yoloMode === 'offline');
         setInferenceMs(performance.now() - t0);
@@ -582,7 +585,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
       {/* ── Mode info bar ── */}
       {mode === 'inspection' && offlineFallback && (
         <div className="px-4 py-2 bg-brand-50 border-t border-brand-100 text-xs text-brand-800 shrink-0">
-          <span className="font-semibold">Mode Offline</span> — analisis kualitas dari piksel kamera. Jenis produk diambil dari data lot.
+          <span className="font-semibold">Mode Offline</span> — inferensi YOLO lokal (ONNX/WASM), tanpa koneksi Railway. Jenis produk diambil dari data lot.
         </div>
       )}
     </div>
