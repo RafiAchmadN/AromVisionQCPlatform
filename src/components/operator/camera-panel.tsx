@@ -27,6 +27,17 @@ interface Detection {
 type YoloStatus = 'checking' | 'online' | 'offline' | 'no-model';
 type InspectionMode = 'simulation' | 'inspection';
 
+// Products supported by Roboflow filter in Railway service
+const FILTERABLE_PRODUCTS = new Set(['pisang','apel','jeruk','tomat','kentang','timun']);
+
+const PRODUCT_LABELS: Record<string, string> = {
+  pisang:'Pisang', apel:'Apel', buah_naga:'Buah Naga', delima:'Delima',
+  jeruk:'Jeruk', anggur:'Anggur', lemon:'Lemon', stroberi:'Stroberi',
+  leci:'Leci', blackberry:'Blackberry', bilberry:'Bilberry',
+  buah_nangka:'Buah Nangka', nanas:'Nanas', tomat:'Tomat',
+  kentang:'Kentang', timun:'Timun',
+};
+
 // ─── Mock detection data ────────────────────────────────────────────────────
 
 const FRUIT_QUALITY = [
@@ -463,6 +474,20 @@ export function OperatorCameraPanel({ activeSession }: Props) {
           )}
         </div>
 
+        {/* Product filter indicator — online inspection only */}
+        {mode === 'inspection' && yoloMode === 'online' && activeSession?.productType && (
+          <div className="flex items-center gap-1 shrink-0 min-w-0">
+            <span className="text-[10px] text-gray-400">Filter:</span>
+            {FILTERABLE_PRODUCTS.has(activeSession.productType) ? (
+              <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full truncate max-w-[70px]">
+                {PRODUCT_LABELS[activeSession.productType] ?? activeSession.productType}
+              </span>
+            ) : (
+              <span className="text-[10px] text-gray-400 italic">semua</span>
+            )}
+          </div>
+        )}
+
         {/* YOLO mode toggle — only in inspection mode */}
         {mode === 'inspection' && (
           <div className="flex items-center gap-1.5 shrink-0">
@@ -514,6 +539,11 @@ export function OperatorCameraPanel({ activeSession }: Props) {
             {!isProcessing && inferenceMs !== null && (
               <div className="bg-black/50 text-green-400 text-xs px-2 py-1 rounded font-mono">
                 {inferenceMs.toFixed(0)} ms
+              </div>
+            )}
+            {yoloMode === 'online' && activeSession?.productType && FILTERABLE_PRODUCTS.has(activeSession.productType) && (
+              <div className="bg-green-900/70 text-green-300 text-[10px] px-2 py-1 rounded font-semibold">
+                🎯 {PRODUCT_LABELS[activeSession.productType] ?? activeSession.productType} only
               </div>
             )}
             {yoloError && (
