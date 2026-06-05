@@ -289,9 +289,15 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         setYoloError(null);
       }
 
-      // Offline YOLO ONNX inference
+      // Offline YOLO ONNX inference — draw video frame to temp canvas first
       try {
-        const dets = await detectFromCanvas(canvas, activeSession?.productType ?? null) as Detection[];
+        const frameCanvas = document.createElement('canvas');
+        frameCanvas.width  = video.videoWidth  || canvas.width;
+        frameCanvas.height = video.videoHeight || canvas.height;
+        const fCtx = frameCanvas.getContext('2d');
+        if (!fCtx) { pendingRef.current = false; setIsProcessing(false); return; }
+        fCtx.drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
+        const dets = await detectFromCanvas(frameCanvas, activeSession?.productType ?? null) as Detection[];
         setYoloError(null);
         setOfflineFallback(yoloMode === 'offline');
         setInferenceMs(performance.now() - t0);
@@ -299,7 +305,7 @@ export function OperatorCameraPanel({ activeSession }: Props) {
         if (dets.length > 0) {
           consecutiveEmptyRef.current = 0;
           updateIndicators(dets);
-          drawOverlay(dets, canvas, canvas.width, canvas.height);
+          drawOverlay(dets, canvas, frameCanvas.width, frameCanvas.height);
           for (const det of dets) saveFrame(det).catch(() => {});
         } else { consecutiveEmptyRef.current += 1; }
       } finally {
