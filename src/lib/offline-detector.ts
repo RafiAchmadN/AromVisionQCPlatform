@@ -161,12 +161,14 @@ export async function detectFromCanvas(
     }
   }
 
+  // Match class_map.py labels used by the Railway service
+  const CLASS_LABELS = ['buah_segar', 'busuk_ringan', 'busuk_sedang', 'busuk_berat'];
+
   const scaleX = canvas.width  / INPUT_SIZE;
   const scaleY = canvas.height / INPUT_SIZE;
-  const objectClass = productType ?? 'bahan_baku';
 
   return kept.map(({ bbox, score, classId }) => ({
-    object_class:     objectClass,
+    object_class:     CLASS_LABELS[classId] ?? 'bahan_baku',
     confidence_score: Math.round(score * 1000) / 1000,
     bbox: {
       x: bbox[0] * scaleX,
