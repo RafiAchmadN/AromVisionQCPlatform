@@ -4,6 +4,12 @@ frontend:
     preBuild:
       commands:
         - npm install --legacy-peer-deps
+        - mkdir -p public/models
+        - cp yolo_service/models/best.onnx public/models/best.onnx
+        - cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm public/
+        - cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs public/
+        - cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm public/
+        - cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs public/
     build:
       commands:
         - echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> .env.production

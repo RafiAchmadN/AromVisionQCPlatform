@@ -45,8 +45,12 @@ test-results/
 
 # YOLO service
 yolo_service/.venv/
+yolo_service/.venv2/
 yolo_service/dataset/
 yolo_service/runs/
 yolo_service/__pycache__/
 yolo_service/*.pt
-# models/best.pt TIDAK di-ignore agar bisa di-deploy ke Railway
+
+# WASM runtime files — copied from node_modules at build time (see amplify.yml)
+public/ort-wasm-simd-threaded*.wasm
+public/ort-wasm-simd-threaded*.mjs
