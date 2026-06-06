@@ -82,6 +82,22 @@ Webcam / Camera
 
 Real-time bounding box overlay on canvas, detection every 1.5 seconds, grade shown live per frame.
 
+### 🤖 YOLO Online vs Offline
+
+| | Online | Offline |
+|---|---|---|
+| **Engine** | YOLOv11 FastAPI on Railway | YOLOv11n ONNX via WebAssembly (browser) |
+| **Model** | Same `best.pt` weights, served server-side | `best.onnx` exported from `best.pt`, runs client-side |
+| **Product Filter** | ✅ Filters by lot product (pisang→banana only, etc.) | ❌ Not applicable — model detects freshness class only |
+| **Classes shown** | Product-aware (e.g. `Fresh Banana 87%`) | Freshness-aware (`buah_segar`, `busuk_ringan`, `busuk_sedang`, `busuk_berat`) |
+| **Internet required** | Yes — calls Railway endpoint | No — WASM runtime loaded once from jsDelivr CDN, then fully offline |
+| **Latency** | ~200–800 ms (Railway cold start on free tier) | ~150–400 ms (browser inference, no network) |
+| **Fallback** | Auto-falls back to Offline if Railway unreachable (timeout 8 s) | Always available |
+
+**Switching:** Header row 2 → `YOLO: [● Online] [● Offline]` toggle (only shown in Inspection mode, disabled while camera is running).
+
+When Online mode is active and a lot with a supported product is open (pisang, apel, jeruk, tomat, kentang, timun), a **🎯 Pisang only** filter badge appears on the video feed — Railway service drops all non-matching detections server-side.
+
 ### ⚡ Auto-Approval Engine
 - Batch with `avg_confidence ≥ 95%` **AND** `avg_rot_level ≤ 5%` → **APPROVED** automatically, no manager queue
 - Below threshold → enters **MANAGER_REVIEW** with full AI decision rationale
