@@ -4,6 +4,8 @@
 
 Built for **CyberHack 2026** · Co-organised with UKM Cyber Security ITS · Sponsored by Xtremax, AWS, BuildPad
 
+🌐 **Live Demo:** [main.d1cao7uhcec3x9.amplifyapp.com](https://main.d1cao7uhcec3x9.amplifyapp.com)
+
 ---
 
 ## The Problem
